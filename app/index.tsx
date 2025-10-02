@@ -20,7 +20,7 @@ export default function Home() {
     <>
       <Stack.Screen options={{ title: "Home", headerShown: false }} />
 
-      <Container className="gap-12">
+      <Container className="gap-2">
         <Link href={{ pathname: "/search" }} asChild>
           <Button>
             <View className="flex flex-row justify-between items-center">
@@ -31,7 +31,7 @@ export default function Home() {
           </Button>
         </Link>
 
-        <View className="flex-1 gap-4">
+        <ScrollView className="flex-1 gap-4 pt-10">
           <View className="flex-row justify-between">
             <Text className="text-zinc-600 text-lg font-medium">
               You might like...
@@ -48,8 +48,8 @@ export default function Home() {
 
           <ScrollView
             horizontal
-            contentContainerClassName="gap-4 mt-0.5"
-            className="max-h-44"
+            contentContainerClassName="gap-4 mt-4"
+            className="h-44"
           >
             <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32"></View>
             <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32"></View>
@@ -58,42 +58,26 @@ export default function Home() {
             <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32"></View>
           </ScrollView>
 
-          <Text className="text-zinc-600 text-lg font-medium pt-4">
+          <Text className="text-zinc-600 text-lg font-medium pt-4 mt-4">
             Recently updated
           </Text>
 
-          <FlatList
-            className="flex-1 pb-4"
-            contentContainerClassName="items-center justify-center"
-            columnWrapperClassName="gap-4"
-            columnWrapperStyle={{
-              minHeight: contentHeight,
-            }}
-            numColumns={3}
-            data={[
-              "1",
-              "2",
-              "3",
-              "4",
-              "5",
-              "6",
-              "7",
-              "8",
-              "9",
-              "10",
-              "11",
-              "12",
-            ]}
-            keyExtractor={(item) => item}
-            centerContent
-            renderItem={({ item }) => (
-              <View
-                key={item}
-                className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32"
-              ></View>
-            )}
-          />
-        </View>
+          <View className="flex flex-wrap gap-4 justify-center flex-row w-full flex-1 mt-4" style={{ minHeight: contentHeight }}>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+            <View className="bg-zinc-900 border-2 border-zinc-800 rounded-lg aspect-[9/12] max-w-32 h-44"></View>
+
+          </View>
+        </ScrollView>
       </Container>
     </>
   );
