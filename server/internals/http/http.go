@@ -6,11 +6,13 @@ import (
 
 	"server/internals/http/handlers"
 	"server/internals/http/middleware"
+	"server/internals/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type HttpHandler struct{}
+
 func (HttpHandler) Run() {
 	middleware_setup := middleware.Middlewares{}
 	handlers_setup := handlers.Handlers{}
@@ -24,5 +26,8 @@ func (HttpHandler) Run() {
 	handlers_setup.Consume(app)
 
 	port := os.Getenv("PORT")
-	app.Listen(fmt.Sprintf(":%v", port))
+
+	if err := app.Listen(fmt.Sprintf(":%v", port)); err != nil {
+		utils.LOGGER.INFO.Fatalf("An error occurred while running application, error: %+v\n", err)
+	}
 }

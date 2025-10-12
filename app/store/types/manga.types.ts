@@ -1,4 +1,4 @@
-type Image = any; // ???
+type Image = string;
 
 export interface Page {
   id: number;
@@ -12,11 +12,16 @@ export interface Chapter {
 }
 
 export interface Manga {
-  id: string;
+  id?: string;
 
-  cover: Image;
+  image: Image;
+  image_url: string
+  image_type: string
+
+  url: string
   name: string;
   description?: string;
 
-  chapters: Chapter[];
+  tags?: string[] | null
+  chapters?: Chapter[];
 }

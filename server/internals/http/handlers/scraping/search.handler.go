@@ -1,8 +1,6 @@
 package scraping
 
 import (
-	"fmt"
-
 	"server/internals/domain/scraping/services"
 	"server/internals/http/middleware"
 	"server/internals/utils"
@@ -20,6 +18,7 @@ func SearchHandler(ctx *fiber.Ctx) error {
 
 	response, err := service.Exec(services.SearchMangasRequest{
 		Query: query,
+		Ctx: ctx,
 	})
 	if err != nil {
 		utils.LOGGER.ERROR.Printf("Unable to retrieve data, error: %+v\n", err)
@@ -28,10 +27,6 @@ func SearchHandler(ctx *fiber.Ctx) error {
 			"status":  "ERROR",
 			"message": err.Error(),
 		})
-	}
-
-	for _, item := range response.Mangas {
-		fmt.Printf("\n MANGAS FOUND: \nManga: \n - Name: %v\n - Description: %v\n - Image url: %v\n\n", item.Name, item.Description, item.ImageUrl)
 	}
 
 	return ctx.Status(200).JSON(response)

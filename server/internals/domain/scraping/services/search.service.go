@@ -9,6 +9,8 @@ import (
 	"server/internals/domain/scraping/entities"
 	"server/internals/http/middleware"
 	"server/internals/utils"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type SearchMangasService struct {
@@ -17,10 +19,11 @@ type SearchMangasService struct {
 
 type SearchMangasRequest struct {
 	Query string
+	Ctx   *fiber.Ctx // request termination
 }
 
 type SearchMangasResponse struct {
-	Mangas []entities.Manga
+	Mangas []entities.Manga `json:"mangas"`
 }
 
 func (self SearchMangasService) Exec(request SearchMangasRequest) (*SearchMangasResponse, error) {
@@ -116,7 +119,7 @@ func (self SearchMangasService) Exec(request SearchMangasRequest) (*SearchMangas
 		}
 
 		manga.ImageUrl = *thumbnail_src
-		
+
 		image_resource, err := thumbnail_container.Resource()
 		if err != nil || len(image_resource) == 0 {
 			mangas = append(mangas, manga)
