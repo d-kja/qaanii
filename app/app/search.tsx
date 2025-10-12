@@ -1,12 +1,11 @@
 import EvilIcons from "@expo/vector-icons/EvilIcons";
 import { Stack } from "expo-router";
 import { useCallback, useState } from "react";
-import { ScrollView, TextInput, View } from "react-native";
+import { ScrollView, Text, TextInput, View } from "react-native";
 import { Button } from "@/components/Button";
 import { Container } from "@/components/Container";
-import { useSearch } from "@/hooks/search/search.hook";
-import { mangaMocks } from "@/utils/mocks";
 import { MangaPreviewContainer } from "@/components/mangas/preview-container";
+import { useSearch } from "@/hooks/search/search.hook";
 
 export default function SearchPage() {
   const [query, setQuery] = useState<string>();
@@ -19,6 +18,8 @@ export default function SearchPage() {
   const handleSearch = async () => {
     await search(query);
   };
+
+  const hasResults = Boolean(results?.length);
 
   return (
     <>
@@ -49,7 +50,13 @@ export default function SearchPage() {
 
         <ScrollView className="flex-1 gap-4 pt-4">
           <View className="flex flex-wrap gap-3 justify-center flex-row w-full flex-1 mt-4">
-            {mangaMocks?.map?.((result, idx) => {
+            {isLoading ? (
+              <Text className="text-zinc-600">Loading results...</Text>
+            ) : (
+              !hasResults && <Text className="text-zinc-600">Empty...</Text>
+            )}
+
+            {results?.map?.((result, idx) => {
               return <MangaPreviewContainer key={idx} manga={result} />;
             })}
           </View>

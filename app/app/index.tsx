@@ -2,7 +2,6 @@ import Entypo from "@expo/vector-icons/Entypo";
 import { Link, Stack } from "expo-router";
 import {
 	Dimensions,
-	FlatList,
 	ScrollView,
 	Text,
 	TouchableOpacity,
