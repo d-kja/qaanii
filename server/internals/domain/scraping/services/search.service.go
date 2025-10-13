@@ -1,10 +1,14 @@
 package services
 
 import (
+	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"server/internals/domain/scraping/entities"
 	"server/internals/http/middleware"
@@ -30,6 +34,10 @@ func (self SearchMangasService) Exec(request SearchMangasRequest) (*SearchMangas
 	scraper, page := self.Scraper.New()
 	defer scraper.MustClose()
 
+	if page == nil {
+		return nil, errors.New("Invalid page")
+	}
+
 	url := fmt.Sprintf("%v/search?q=%v", utils.BASE_URL, url.QueryEscape(request.Query))
 
 	page.MustNavigate(url)
@@ -38,13 +46,61 @@ func (self SearchMangasService) Exec(request SearchMangasRequest) (*SearchMangas
 	self.Scraper.HandleGuard(page)
 
 	// Wait manga list to load
-	page.MustElement(LIST_CONTAINER)
+	count := 0
+
+	for {
+		ctx_timeout, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*10))
+		defer cancel()
+
+		found := false
+
+		go func() {
+			utils.LOGGER.INFO.Println("Waiting for page element")
+			page.MustElement(LIST_CONTAINER)
+
+			found = true
+		}()
+
+		select {
+		case <-ctx_timeout.Done():
+			{
+				utils.LOGGER.INFO.Printf("Element not found, repeating count: %v\n", count+1)
+				count++
+			}
+		}
+
+		if found {
+			utils.LOGGER.INFO.Println("Element found!")
+			break
+		}
+
+		if count >= 3 {
+			utils.LOGGER.INFO.Println("Context reached limit")
+			break
+		}
+	}
+
+	page_window, err := page.GetWindow()
+	if err == nil {
+		page_height := page_window.Height
+
+		if page_height != nil {
+			offset_y := float64(*page_height) + 1000.0
+
+			utils.LOGGER.INFO.Println("Scrolling to preload...")
+			page.Mouse.Scroll(0, offset_y, 25)
+		}
+	}
 
 	mangas_element := page.MustElementsX(MANGA_LIST)
 	mangas := []entities.Manga{}
 
 	for idx, manga_container := range mangas_element {
 		manga := entities.Manga{}
+		if manga_container == nil {
+			utils.LOGGER.ERROR.Printf("Manga (%v) - Invalid container\n", idx+1)
+			continue
+		}
 
 		content, content_err := manga_container.ElementX(MANGA_CONTENT)
 		if content_err != nil {

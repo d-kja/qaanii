@@ -51,14 +51,14 @@ export default function SearchPage() {
         <ScrollView className="flex-1 gap-4 pt-4">
           <View className="flex flex-wrap gap-3 justify-center flex-row w-full flex-1 mt-4">
             {isLoading ? (
-              <Text className="text-zinc-600">Loading results...</Text>
+              <Text className="text-zinc-700/80">Loading results...</Text>
+            ) : !hasResults ? (
+              <Text className="text-zinc-700/80">Empty...</Text>
             ) : (
-              !hasResults && <Text className="text-zinc-600">Empty...</Text>
+              results?.map?.((result, idx) => {
+                return <MangaPreviewContainer key={idx} manga={result} />;
+              })
             )}
-
-            {results?.map?.((result, idx) => {
-              return <MangaPreviewContainer key={idx} manga={result} />;
-            })}
           </View>
         </ScrollView>
       </Container>

@@ -24,13 +24,11 @@ export const useSearchStore = create<SearchStore>((set) => {
     results: [],
 
     search: async (q?: string) => {
-      console.log("making request");
       const response = await api.get<SearchResponseType>("/search", {
         params: {
           q,
         },
       });
-      console.log("finished request");
 
       const results = response?.data?.mangas ?? [];
 

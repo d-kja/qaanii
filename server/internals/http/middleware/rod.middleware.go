@@ -52,6 +52,11 @@ func (RodMiddleware) HandleGuard(page *rod.Page) {
 		return
 	}
 
+	if (element == nil) {
+		utils.LOGGER.INFO.Printf("Guard pointer nil")
+		return
+	}
+
 	content, err := element.Text()
 	if err != nil {
 		utils.LOGGER.INFO.Println("Guard found, but content unavailable", err)

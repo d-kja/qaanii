@@ -8,7 +8,7 @@ export const useSearch = () => {
 		mutationKey: [SEARCH_STORE_KEY, "HOOK"],
 		mutationFn: searchMutation,
 		onError(error) {
-			console.error(error);
+			console.info(error);
 
 			const message = error?.message ?? "Unable to retrieve search results";
 			Toast.error(message);
