@@ -8,29 +8,30 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SearchHandler(ctx *fiber.Ctx) error {
-	query := ctx.Query("q")
-	if len(query) == 0 {
+func GetBySlugHandler(ctx *fiber.Ctx) error {
+	slug := ctx.Params("slug")
+	if len(slug) == 0 {
 
-		utils.LOGGER.ERROR.Printf("Query %v is invalid\n", query)
+		utils.LOGGER.ERROR.Printf("Slug %v is invalid\n", slug)
 		return ctx.Status(400).JSON(map[string]string{
 			"status":  "ERROR",
-			"message": "Invalid query provided",
+			"message": "Invalid slug was provided",
 		})
 	}
 
 	scraper := middleware.RodMiddleware{}
-	service := services.SearchMangasService{
+	instance := services.GetBySlugService{
 		Scraper: scraper,
 	}
-	payload := services.SearchMangasRequest{
-		Query: query,
-		Ctx: ctx,
+
+	payload := services.GetBySlugRequest{
+		Slug: slug,
+		Ctx:  ctx,
 	}
 
-	response, err := service.Exec(payload)
+	response, err := instance.Exec(payload)
 	if err != nil {
-		utils.LOGGER.ERROR.Printf("Unable to retrieve data, error: %+v\n", err)
+		utils.LOGGER.ERROR.Printf("Get by slug handler, service error: %+v\n", err)
 
 		return ctx.Status(500).JSON(map[string]string{
 			"status":  "ERROR",

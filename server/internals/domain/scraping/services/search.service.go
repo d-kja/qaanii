@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -128,6 +127,7 @@ func (self SearchMangasService) Exec(request SearchMangasRequest) (*SearchMangas
 		}
 
 		manga.Name = *manga_title
+		manga.Slug = (*manga_url)[1:]
 		manga.Url = fmt.Sprintf("%v%v", utils.BASE_URL, *manga_url)
 
 		manga_description, description_err := content.ElementX(MANGA_DESCRIPTION)
