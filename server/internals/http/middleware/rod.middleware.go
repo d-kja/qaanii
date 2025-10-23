@@ -45,6 +45,7 @@ func (RodMiddleware) SetupStealth(instance *rod.Browser) *rod.Page {
 func (RodMiddleware) HandleGuard(page *rod.Page) {
 	query := "//title[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'ddos-guard')]"
 
+	// TODO: IMPROVE GUARD.
 	utils.LOGGER.INFO.Println("Searching for Guard")
 	element, err := page.ElementX(query)
 	if err != nil {

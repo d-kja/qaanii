@@ -43,6 +43,7 @@ func (self SearchMangasService) Exec(request SearchMangasRequest) (*SearchMangas
 	page.MustWaitLoad()
 
 	self.Scraper.HandleGuard(page)
+	time.Sleep(time.Millisecond * 250)
 
 	// Wait manga list to load
 	count := 0
@@ -60,6 +61,7 @@ func (self SearchMangasService) Exec(request SearchMangasRequest) (*SearchMangas
 			found = true
 		}()
 
+		// FIX: refactor this in the future, it's garbagio
 		select {
 		case <-ctx_timeout.Done():
 			{
@@ -155,6 +157,8 @@ func (self SearchMangasService) Exec(request SearchMangasRequest) (*SearchMangas
 
 				tags = append(tags, content)
 			}
+
+			manga.Tags = tags
 		}
 
 		thumbnail_container, thumb_err := manga_container.ElementX(MANGA_THUMBNAIL)

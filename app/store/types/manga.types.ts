@@ -6,22 +6,24 @@ export interface Page {
 }
 
 export interface Chapter {
-  id: number;
-  name: string;
-  pages: Page[];
+  slug: string;
+  date?: string;
+  title?: string;
+
+  pages?: Page[];
 }
 
 export interface Manga {
-  id?: string;
-
   image: Image;
-  image_url: string
-  image_type: string
+  image_url: string;
+  image_type: string;
 
-  url: string
   name: string;
+  slug: string;
   description?: string;
 
-  tags?: string[] | null
+  tags?: string[] | null;
+  url: string;
+
   chapters?: Chapter[];
 }
