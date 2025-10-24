@@ -1,21 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { SEARCH_STORE_KEY, useSearchStore } from "@/store/search.store";
 
+const STAME_TIME = 1000 * 60 * 60 // 60 min
+
 export const useManga = (slug?: string) => {
-  const { getManga } = useSearchStore();
-  const { data, isLoading } = useQuery({
+  const isValidSlug = Boolean(slug?.trim?.()?.length);
+
+  const { getManga, selected } = useSearchStore();
+  const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: [SEARCH_STORE_KEY, "MANGA", slug],
     queryFn: retrieveManga,
     refetchOnWindowFocus: false,
-    enabled: Boolean(slug?.length),
-    staleTime: 1000 * 60 * 60,
+    enabled: isValidSlug,
+    staleTime: STAME_TIME,
   });
 
   async function retrieveManga() {
-    if (!slug?.length) {
-      throw Error(
-        "Slug not found...",
-      );
+    if (!isValidSlug) {
+      throw Error("Slug not found...");
     }
 
     const data = await getManga(slug);
@@ -23,7 +25,10 @@ export const useManga = (slug?: string) => {
   }
 
   return {
-    isLoading,
+    isLoading: isLoading || isRefetching,
+    selected,
     data,
+
+    refresh: refetch,
   };
 };

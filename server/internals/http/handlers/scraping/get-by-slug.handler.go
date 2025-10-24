@@ -1,6 +1,8 @@
 package scraping
 
 import (
+	"strings"
+
 	"server/internals/domain/scraping/services"
 	"server/internals/http/middleware"
 	"server/internals/utils"
@@ -10,7 +12,7 @@ import (
 
 func GetBySlugHandler(ctx *fiber.Ctx) error {
 	slug := ctx.Params("slug")
-	if len(slug) == 0 {
+	if len(strings.TrimSpace(slug)) == 0 {
 
 		utils.LOGGER.ERROR.Printf("Slug %v is invalid\n", slug)
 		return ctx.Status(400).JSON(map[string]string{
