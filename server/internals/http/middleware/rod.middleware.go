@@ -48,7 +48,7 @@ func (RodMiddleware) QueryRetry(query string, max_retries int, page *rod.Page, q
 	found := false
 
 	for {
-		utils.LOGGER.INFO.Printf("Run state:\n - Found: %v\n", found)
+		utils.LOGGER.INFO.Printf("[RETRY/SINGLE] - Found: %v\n", found)
 		if found {
 			break
 		}
@@ -143,13 +143,13 @@ func (RodMiddleware) QueryRetryX(query string, max_retries int, page *rod.Page, 
 	found := false
 
 	for {
-		utils.LOGGER.INFO.Printf("\nRun state:\n - Found: %v\n - Count: %v\n\n", found, retry_count)
+		utils.LOGGER.INFO.Printf("[RETRY/SINGLEX] - Found: %v\n", found)
 		if found {
 			break
 		}
 
-		utils.LOGGER.INFO.Println("Checking retry")
 		if retry_count >= max_retries {
+			utils.LOGGER.INFO.Println("[RETRY/SINGLEX] - Max retry count reached, stopping...")
 			break
 		}
 
@@ -159,20 +159,18 @@ func (RodMiddleware) QueryRetryX(query string, max_retries int, page *rod.Page, 
 		thread_ch := make(chan bool, 1)
 		defer close(thread_ch)
 
-		utils.LOGGER.INFO.Println("Running thread")
 		go func(ch chan bool, ctx context.Context) {
 			element, err := page.ElementX(query)
 
 			canceled_ctx := func(ctx context.Context) bool {
 				if err := ctx.Err(); err != nil {
-					utils.LOGGER.WARN.Println("Context was cancelled, returning")
+					utils.LOGGER.WARN.Println("Context was cancelled, returning...")
 					return true
 				}
 
 				return false
 			}
 
-			utils.LOGGER.INFO.Printf("Element err? %v\n", err)
 			if err != nil {
 				retry_count++
 
@@ -181,6 +179,7 @@ func (RodMiddleware) QueryRetryX(query string, max_retries int, page *rod.Page, 
 					return
 				}
 
+				utils.LOGGER.INFO.Printf("[RETRY/SINGEX] - An error occurred while querying the element, error: %v\n", err)
 				thread_ch <- false
 				return
 			}
@@ -211,8 +210,8 @@ func (RodMiddleware) QueryRetryX(query string, max_retries int, page *rod.Page, 
 			}
 
 			was_canceled := canceled_ctx(ctx)
-			utils.LOGGER.INFO.Printf("Found, but is it canceled? %v\n", was_canceled)
 			if was_canceled {
+				utils.LOGGER.INFO.Println("[RETRY/SINGLEX] - Element found, but the context was canceled")
 				return
 			}
 
@@ -222,14 +221,14 @@ func (RodMiddleware) QueryRetryX(query string, max_retries int, page *rod.Page, 
 		select {
 		case <-ctx_timeout.Done():
 			{
-				utils.LOGGER.INFO.Printf("Context timed out, retrying... (Count: %v) \n", retry_count)
+				utils.LOGGER.INFO.Printf("[RETRY/SINGLEX] - Context timed out, retrying... (Count: %v) \n", retry_count + 1)
 				retry_count++
 
 				continue
 			}
 		case was_found := <-thread_ch:
 			{
-				utils.LOGGER.INFO.Printf("Thread returned a response: %v\n", was_found)
+				utils.LOGGER.INFO.Printf("[RETRY/SINGLEX] - Thread returned a response, found: %v\n", was_found)
 				found = was_found
 			}
 		}
@@ -243,7 +242,7 @@ func (RodMiddleware) QueryManyRetryX(query string, max_retries int, page *rod.Pa
 	found := false
 
 	for {
-		utils.LOGGER.INFO.Printf("Run state:\n - Found: %v\n", found)
+		utils.LOGGER.INFO.Printf("[RETRY/MANYX] - Found: %v\n", found)
 		if found {
 			break
 		}
@@ -331,18 +330,18 @@ func (self RodMiddleware) HandleGuard(page *rod.Page) {
 	query_ch := make(chan bool, 1)
 	defer close(query_ch)
 
-	utils.LOGGER.INFO.Printf("Searching for Guard [Safe query]\n")
+	utils.LOGGER.INFO.Printf("[RETRY] - Searching for Guard\n")
 	self.QueryRetryX(query, 5, page, query_ch)
 	was_found := <-query_ch
 
 	if !was_found {
-		utils.LOGGER.INFO.Printf("Guard not found [Safe query]\n")
+		utils.LOGGER.INFO.Printf("[RETRY] - Guard not found [Safe query]\n")
 		return
 	}
 
 	element, err := page.ElementX(query)
 	if err != nil {
-		utils.LOGGER.INFO.Printf("Guard not found [Blocking query]\n")
+		utils.LOGGER.INFO.Printf("[BLOCKING] - Guard not found\n")
 		return
 	}
 
@@ -357,7 +356,7 @@ func (self RodMiddleware) HandleGuard(page *rod.Page) {
 		return
 	}
 
-	utils.LOGGER.INFO.Printf("Guard found, type: %v. Waiting a few seconds...\n", content)
+	utils.LOGGER.INFO.Printf("Guard found, type: %v. Waiting 5 seconds...\n", content)
 	time.Sleep(time.Second * 5)
 }
 

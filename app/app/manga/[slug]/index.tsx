@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Link, Stack } from "expo-router";
+import { Link, Stack, useNavigation } from "expo-router";
 import { useLocalSearchParams } from "expo-router/build/hooks";
-import { Button, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useEffect } from "react";
+import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Container } from "@/components/Container";
 import { useManga } from "@/hooks/manga/get-manga.hook";
 
@@ -11,7 +12,17 @@ type MangaPageParams = {
 
 export default function MangaPage() {
   const { slug } = useLocalSearchParams<MangaPageParams>();
+  const navigate = useNavigation();
+
   const { data: manga, isLoading, refresh } = useManga(slug);
+
+  useEffect(() => {
+    if (slug?.length && slug !== "undefined") {
+      return;
+    }
+
+    navigate.goBack();
+  }, [navigate, slug]);
 
   const hasImage = !!(manga?.image?.length ?? manga?.image_url?.length);
 
@@ -75,7 +86,7 @@ export default function MangaPage() {
 
           <View className="flex flex-col gap-2 mt-6">
             {manga?.chapters?.map?.((chapter) => {
-              const chapterSlug = chapter.slug
+              const chapterSlug = chapter.slug;
 
               return (
                 <Link
@@ -83,15 +94,17 @@ export default function MangaPage() {
                   href={`/manga/${chapterSlug}`}
                   key={chapter?.slug}
                 >
-                  <TouchableOpacity
-                    className="flex flex-row justify-between items-center border-2 border-zinc-800 bg-zinc-900 px-4 py-3 rounded-lg max-w-full"
-                  >
-                    <Text className="text-zinc-500 max-w-[70%] line-clamp-2 overflow-hidden">{chapter?.title ?? "-"}</Text>
+                  <TouchableOpacity className="flex flex-row justify-between items-center border-2 border-zinc-800 bg-zinc-900 px-4 py-3 rounded-lg max-w-full">
+                    <Text className="text-zinc-500 max-w-[70%] line-clamp-2 overflow-hidden">
+                      {chapter?.title ?? "-"}
+                    </Text>
 
-                    <Text className="text-zinc-700">{chapter?.date ?? "-"}</Text>
+                    <Text className="text-zinc-700">
+                      {chapter?.date ?? "-"}
+                    </Text>
                   </TouchableOpacity>
                 </Link>
-              )
+              );
             })}
           </View>
         </ScrollView>

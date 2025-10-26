@@ -7,6 +7,7 @@ export const useSearch = () => {
 	const { mutateAsync, isPending } = useMutation({
 		mutationKey: [SEARCH_STORE_KEY, "HOOK"],
 		mutationFn: searchMutation,
+    retry: false,
 		onError(error) {
 			console.info(error);
 
@@ -16,7 +17,7 @@ export const useSearch = () => {
 	});
 
 	async function searchMutation(query?: string) {
-		if (!query?.length) {
+		if (!query?.trim?.()?.length || query === "undefined") {
 			throw Error(
 				"Type something before searching... the scraper can't guess what you want MF",
 			);
