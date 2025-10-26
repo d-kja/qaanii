@@ -59,24 +59,27 @@ func (self GetChapterService) Exec(request GetChapterRequest) (*GetChapterRespon
 			offset_y := float64(*page_height) + 5000.0
 
 			time.Sleep(time.Second * 5)
-			utils.LOGGER.INFO.Println("Scrolling to preload...")
+			utils.LOGGER.INFO.Println("Scrolling to preload... (x1)")
 			page.Mouse.Scroll(0, offset_y, 5)
 			time.Sleep(time.Second * 2)
 
-			utils.LOGGER.INFO.Println("Scrolling to preload...")
-			offset_y += 15000.0
+			utils.LOGGER.INFO.Println("Scrolling to preload... (x2)")
+			offset_y += 10000.0
 			page.Mouse.Scroll(0, offset_y, 5)
 			time.Sleep(time.Second * 2)
 
-			utils.LOGGER.INFO.Println("Scrolling to preload...")
-			offset_y += 15000.0
+			utils.LOGGER.INFO.Println("Scrolling to preload... (x3)")
+			offset_y += 10000.0
 			page.Mouse.Scroll(0, offset_y, 5)
 			time.Sleep(time.Second * 2)
 
-			utils.LOGGER.INFO.Println("Scrolling to preload...")
-			offset_y += 15000.0
+			utils.LOGGER.INFO.Println("Scrolling to preload... (x4)")
+			offset_y += 10000.0
 			page.Mouse.Scroll(0, offset_y, 5)
-			time.Sleep(time.Second * 2)
+
+
+			utils.LOGGER.INFO.Println("Waiting a few seconds to load stuff...")
+			time.Sleep(time.Second * 5)
 		}
 	}
 

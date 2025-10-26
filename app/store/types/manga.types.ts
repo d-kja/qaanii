@@ -1,29 +1,31 @@
 type Image = string;
 
 export interface Page {
-  id: number;
-  content: Image[];
+	order: number;
+	image: Image;
+	imageUrl: string;
+	imageType: string;
 }
 
 export interface Chapter {
-  slug: string;
-  date?: string;
-  title?: string;
+	slug: string;
+	date?: string;
+	title?: string;
 
-  pages?: Page[];
+	pages?: Record<string, Page>;
 }
 
 export interface Manga {
-  image: Image;
-  image_url: string;
-  image_type: string;
+	image: Image;
+	image_url: string;
+	image_type: string;
 
-  name: string;
-  slug: string;
-  description?: string;
+	name: string;
+	slug: string;
+	description?: string;
 
-  tags?: string[] | null;
-  url: string;
+	tags?: string[] | null;
+	url: string;
 
-  chapters?: Chapter[];
+	chapters?: Chapter[];
 }
