@@ -85,7 +85,11 @@ export const useSearchStore = create<SearchStore>((set, get) => {
 
       await Storage.setItem(SEARCH_STORE_KEY, JSON.stringify(data));
     },
-    updateManga: async (slug: string, data: Result) => {
+    updateManga: async (slug: string, data?: Result) => {
+      if (!data) {
+        return
+      }
+
       await Storage.setItem(
         `${SEARCH_STORE_KEY}/${slug}`,
         JSON.stringify(data),
@@ -149,97 +153,20 @@ export const useSearchStore = create<SearchStore>((set, get) => {
         return;
       }
 
-      const { retrieveManga, updateManga, retrieveStoredManga } = get();
+      const { retrieveManga, retrieveStoredManga } = get();
 
-      const mangas = get().results ?? [];
-      const mangaIndex = mangas?.findIndex?.((manga) => manga.slug === slug);
-
-      if (mangaIndex === -1) {
-        console.info("[STORE/SEARCH] - In-memory manga not found");
-        const manga = await retrieveManga(slug);
-        const storedManga = await retrieveStoredManga(slug);
-
-        if (storedManga) {
-          console.info("[STORE/SEARCH] - Stored manga found");
-          const response: Result = {
-            ...storedManga,
-            ...manga,
-          };
-
-          console.info("[STORE/SEARCH] - Updating stored manga");
-          await updateManga(slug, response);
-          return response;
-        }
-
-        return manga;
+      const manga = await retrieveManga(slug)
+      const storedManga = await retrieveStoredManga(slug)
+      if (!storedManga) {
+        return manga
+      }
+      
+      const response: Result = {
+        ...storedManga,
+        ...manga
       }
 
-      console.info("[STORE/SEARCH] - In-memory manga found");
-      let manga = mangas[mangaIndex];
-      if (!manga?.slug) {
-        console.error(
-          "[STORE/SEARCH] - Manga index found, direct indexing not working? This is bad bad...",
-        );
-
-        return;
-      }
-
-      if (!manga.state) {
-        manga = createManga(manga) as Result
-      }
-
-      const procedurePromise: Promise<Result | undefined> = new Promise(
-        (resolve, reject) => {
-          console.info("[STORE/SEARCH] - Pre-updating selected state");
-          manga.state.loading = true;
-
-          set({
-            selected: manga,
-          });
-
-          const steps = async () => {
-            try {
-              console.info("[STORE/SEARCH] - Searching manga data");
-              const newManga = await retrieveManga(slug);
-
-              console.info("[STORE/SEARCH] - Retrieving stored data");
-              const storedManga = await retrieveStoredManga(slug);
-              console.log(newManga?.chapters)
-
-              const response = createManga({
-                ...manga,
-                ...storedManga,
-                ...newManga,
-              }) as Result;
-
-              response.state.loading = false;
-              response.state.refetching = false;
-
-              console.info("[STORE/SEARCH] - Closing selected state");
-              await updateManga(slug, response);
-
-              set({
-                selected: response,
-              });
-
-              resolve(manga);
-            } catch (err) {
-              const error = err as Error;
-
-              console.error(
-                "[STORE/SEARCH] - Unable to run procedure, error:",
-                error,
-              );
-
-              reject(error?.message ?? "Unable to run procedure");
-            }
-          };
-
-          steps();
-        },
-      );
-
-      return await procedurePromise;
+      return response
     },
   };
 });

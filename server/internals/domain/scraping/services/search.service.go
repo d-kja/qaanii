@@ -1,13 +1,11 @@
 package services
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 
 	"server/internals/domain/scraping/entities"
 	"server/internals/http/middleware"
@@ -43,42 +41,13 @@ func (self SearchMangasService) Exec(request SearchMangasRequest) (*SearchMangas
 	page.MustWaitLoad()
 
 	self.Scraper.HandleGuard(page)
-	time.Sleep(time.Millisecond * 250)
 
-	// Wait manga list to load
-	count := 0
+	list_query_ch := make(chan bool, 1)
+	self.Scraper.QueryRetry(LIST_CONTAINER, 10, page, list_query_ch)
 
-	for {
-		ctx_timeout, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*10))
-		defer cancel()
-
-		found := false
-
-		go func() {
-			utils.LOGGER.INFO.Println("Waiting for page element")
-			page.MustElement(LIST_CONTAINER)
-
-			found = true
-		}()
-
-		// FIX: refactor this in the future, it's garbagio
-		select {
-		case <-ctx_timeout.Done():
-			{
-				utils.LOGGER.INFO.Printf("Element not found, repeating count: %v\n", count+1)
-				count++
-			}
-		}
-
-		if found {
-			utils.LOGGER.INFO.Println("Element found!")
-			break
-		}
-
-		if count >= 3 {
-			utils.LOGGER.INFO.Println("Context reached limit")
-			break
-		}
+	list_exists := <-list_query_ch
+	if !list_exists {
+		return nil, errors.New("Search list not found...")
 	}
 
 	page_window, err := page.GetWindow()

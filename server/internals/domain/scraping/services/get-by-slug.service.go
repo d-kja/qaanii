@@ -1,10 +1,8 @@
 package services
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"server/internals/domain/scraping/entities"
 	"server/internals/http/middleware"
@@ -41,48 +39,12 @@ func (self GetBySlugService) Exec(request GetBySlugRequest) (*GetBySlugResponse,
 
 	self.Scraper.HandleGuard(page)
 
-	time.Sleep(time.Second * 5)
-	// Wait manga list to load
-	count := 0
+	manga_ch := make(chan bool, 1)
+	self.Scraper.QueryManyRetryX(CHAPTER_LINKS, 5, page, manga_ch)
 
-	for {
-		ctx_timeout, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
-		defer cancel()
-
-		found_ch := make(chan bool, 1)
-		defer close(found_ch)
-
-		go func() {
-			utils.LOGGER.INFO.Println("Waiting for page element")
-			elements := page.MustElementsX(CHAPTER_LINKS)
-
-			if !elements.Empty() {
-				found_ch <- false
-				return
-			}
-
-			found_ch <- true
-		}()
-
-		select {
-		case <-ctx_timeout.Done():
-			{
-				utils.LOGGER.INFO.Printf("Element not found, repeating count: %v\n", count+1)
-				count++
-			}
-		}
-
-		was_found := <-found_ch
-
-		if was_found {
-			utils.LOGGER.INFO.Println("Element found!")
-			break
-		}
-
-		if count >= 5 {
-			utils.LOGGER.INFO.Println("Context reached limit")
-			break
-		}
+	is_manga_list_available := <-manga_ch
+	if !is_manga_list_available {
+		return nil, errors.New("Manga list not available")
 	}
 
 	chapters_container := page.MustElementsX(CHAPTER_LINKS)

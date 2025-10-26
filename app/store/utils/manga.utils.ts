@@ -8,14 +8,6 @@ export const createManga = (data?: Result | null): Result | undefined => {
 
   return {
     chapters: [],
-
     ...data,
-
-    // Internal state
-    state: {
-      error: false,
-      loading: false,
-      refetching: false,
-    },
   }
 }

@@ -1,14 +1,18 @@
 import Entypo from "@expo/vector-icons/Entypo";
-import { Stack, useNavigation } from "expo-router";
+import { Stack, useNavigation, usePathname } from "expo-router";
 import { Text, TouchableOpacity } from "react-native";
 import { Container } from "@/components/Container";
 
 export default function NotFoundScreen() {
   const navigate = useNavigation()
+  const path = usePathname()
 
   const handleReturn = () => {
     navigate.goBack()
   }
+
+  console.log("Page not found:", path)
+
   return (
     <>
       <Stack.Screen options={{ title: "Oops!", headerShown: false }} />

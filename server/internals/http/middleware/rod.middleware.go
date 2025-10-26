@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"math/rand/v2"
 	"strings"
@@ -42,29 +43,322 @@ func (RodMiddleware) SetupStealth(instance *rod.Browser) *rod.Page {
 	return page
 }
 
-func (RodMiddleware) HandleGuard(page *rod.Page) {
+func (RodMiddleware) QueryRetry(query string, max_retries int, page *rod.Page, query_ch chan bool) {
+	retry_count := 0
+	found := false
+
+	for {
+		utils.LOGGER.INFO.Printf("Run state:\n - Found: %v\n", found)
+		if found {
+			break
+		}
+
+		if retry_count >= max_retries {
+			break
+		}
+
+		ctx_timeout, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*2))
+		defer cancel()
+
+		thread_ch := make(chan bool, 1)
+		defer close(thread_ch)
+
+		go func(ch chan bool, ctx context.Context) {
+			element, err := page.Element(query)
+
+			canceled_ctx := func(ctx context.Context) bool {
+				if err := ctx.Err(); err != nil {
+					utils.LOGGER.WARN.Println("Context was cancelled, returning")
+					return true
+				}
+
+				return false
+			}
+
+			if err != nil {
+				retry_count++
+
+				was_canceled := canceled_ctx(ctx)
+				if was_canceled {
+					return
+				}
+
+				thread_ch <- false
+				return
+			}
+
+			is_visible, err := element.Visible()
+			if err != nil {
+				retry_count++
+
+				was_canceled := canceled_ctx(ctx)
+				if was_canceled {
+					return
+				}
+
+				thread_ch <- false
+				return
+			}
+
+			if !is_visible {
+				retry_count++
+
+				was_canceled := canceled_ctx(ctx)
+				if was_canceled {
+					return
+				}
+
+				thread_ch <- false
+				return
+			}
+
+			was_canceled := canceled_ctx(ctx)
+			if was_canceled {
+				return
+			}
+
+			thread_ch <- true
+		}(thread_ch, ctx_timeout)
+
+		select {
+		case <-ctx_timeout.Done():
+			{
+				utils.LOGGER.INFO.Printf("Context timed out, retrying... (Count: %v) \n", retry_count)
+				retry_count++
+
+				continue
+			}
+		case was_found := <-thread_ch:
+			{
+				found = was_found
+			}
+		}
+	}
+
+	query_ch <- found
+}
+
+func (RodMiddleware) QueryRetryX(query string, max_retries int, page *rod.Page, query_ch chan bool) {
+	retry_count := 0
+	found := false
+
+	for {
+		utils.LOGGER.INFO.Printf("\nRun state:\n - Found: %v\n - Count: %v\n\n", found, retry_count)
+		if found {
+			break
+		}
+
+		utils.LOGGER.INFO.Println("Checking retry")
+		if retry_count >= max_retries {
+			break
+		}
+
+		ctx_timeout, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*2))
+		defer cancel()
+
+		thread_ch := make(chan bool, 1)
+		defer close(thread_ch)
+
+		utils.LOGGER.INFO.Println("Running thread")
+		go func(ch chan bool, ctx context.Context) {
+			element, err := page.ElementX(query)
+
+			canceled_ctx := func(ctx context.Context) bool {
+				if err := ctx.Err(); err != nil {
+					utils.LOGGER.WARN.Println("Context was cancelled, returning")
+					return true
+				}
+
+				return false
+			}
+
+			utils.LOGGER.INFO.Printf("Element err? %v\n", err)
+			if err != nil {
+				retry_count++
+
+				was_canceled := canceled_ctx(ctx)
+				if was_canceled {
+					return
+				}
+
+				thread_ch <- false
+				return
+			}
+
+			text, err := element.Text()
+			if err != nil {
+				retry_count++
+
+				was_canceled := canceled_ctx(ctx)
+				if was_canceled {
+					return
+				}
+
+				thread_ch <- false
+				return
+			}
+
+			if len(text) == 0 {
+				retry_count++
+
+				was_canceled := canceled_ctx(ctx)
+				if was_canceled {
+					return
+				}
+
+				thread_ch <- false
+				return
+			}
+
+			was_canceled := canceled_ctx(ctx)
+			utils.LOGGER.INFO.Printf("Found, but is it canceled? %v\n", was_canceled)
+			if was_canceled {
+				return
+			}
+
+			thread_ch <- true
+		}(thread_ch, ctx_timeout)
+
+		select {
+		case <-ctx_timeout.Done():
+			{
+				utils.LOGGER.INFO.Printf("Context timed out, retrying... (Count: %v) \n", retry_count)
+				retry_count++
+
+				continue
+			}
+		case was_found := <-thread_ch:
+			{
+				utils.LOGGER.INFO.Printf("Thread returned a response: %v\n", was_found)
+				found = was_found
+			}
+		}
+	}
+
+	query_ch <- found
+}
+
+func (RodMiddleware) QueryManyRetryX(query string, max_retries int, page *rod.Page, query_ch chan bool) {
+	retry_count := 0
+	found := false
+
+	for {
+		utils.LOGGER.INFO.Printf("Run state:\n - Found: %v\n", found)
+		if found {
+			break
+		}
+
+		if retry_count >= max_retries {
+			break
+		}
+
+		ctx_timeout, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*2))
+		defer cancel()
+
+		thread_ch := make(chan bool, 1)
+		defer close(thread_ch)
+
+		go func(ch chan bool, ctx context.Context) {
+			element, err := page.ElementsX(query)
+
+			canceled_ctx := func(ctx context.Context) bool {
+				if err := ctx.Err(); err != nil {
+					utils.LOGGER.WARN.Println("Context was cancelled, returning")
+					return true
+				}
+
+				return false
+			}
+
+			if err != nil {
+				retry_count++
+
+				was_canceled := canceled_ctx(ctx)
+				if was_canceled {
+					return
+				}
+
+				thread_ch <- false
+				return
+			}
+
+			is_empty := element.Empty()
+			if is_empty {
+				retry_count++
+
+				was_canceled := canceled_ctx(ctx)
+				if was_canceled {
+					return
+				}
+
+				thread_ch <- false
+				return
+			}
+
+			was_canceled := canceled_ctx(ctx)
+			if was_canceled {
+				return
+			}
+
+			thread_ch <- true
+		}(thread_ch, ctx_timeout)
+
+		select {
+		case <-ctx_timeout.Done():
+			{
+				utils.LOGGER.INFO.Printf("Context timed out, retrying... (Count: %v) \n", retry_count)
+				retry_count++
+
+				continue
+			}
+		case was_found := <-thread_ch:
+			{
+				if !was_found {
+					time.Sleep(time.Second * 2)
+				}
+
+				found = was_found
+			}
+		}
+	}
+
+	query_ch <- found
+}
+
+func (self RodMiddleware) HandleGuard(page *rod.Page) {
 	query := "//title[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'ddos-guard')]"
 
-	// TODO: IMPROVE GUARD.
-	utils.LOGGER.INFO.Println("Searching for Guard")
-	element, err := page.ElementX(query)
-	if err != nil {
-		utils.LOGGER.INFO.Printf("Guard not found")
+	query_ch := make(chan bool, 1)
+	defer close(query_ch)
+
+	utils.LOGGER.INFO.Printf("Searching for Guard [Safe query]\n")
+	self.QueryRetryX(query, 5, page, query_ch)
+	was_found := <-query_ch
+
+	if !was_found {
+		utils.LOGGER.INFO.Printf("Guard not found [Safe query]\n")
 		return
 	}
 
-	if (element == nil) {
-		utils.LOGGER.INFO.Printf("Guard pointer nil")
+	element, err := page.ElementX(query)
+	if err != nil {
+		utils.LOGGER.INFO.Printf("Guard not found [Blocking query]\n")
+		return
+	}
+
+	if element == nil {
+		utils.LOGGER.INFO.Printf("Guard pointer nil\n")
 		return
 	}
 
 	content, err := element.Text()
 	if err != nil {
-		utils.LOGGER.INFO.Println("Guard found, but content unavailable", err)
+		utils.LOGGER.INFO.Printf("Guard found, but content unavailable. %+v\n", err)
 		return
 	}
 
-	utils.LOGGER.INFO.Printf("Guard found, type: %v\n", content)
+	utils.LOGGER.INFO.Printf("Guard found, type: %v. Waiting a few seconds...\n", content)
+	time.Sleep(time.Second * 5)
 }
 
 func (RodMiddleware) GetAgent() string {

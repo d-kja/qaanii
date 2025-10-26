@@ -6,6 +6,7 @@ type Middlewares struct{}
 func (Middlewares) Consume(instance *fiber.App) {
 	instance.Use(
 		LoggerMiddleware{}.New(),
+		RecoverMiddleware{}.New(),
 		CorsMiddleware{}.New(),
 	)
 }

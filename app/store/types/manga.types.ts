@@ -26,10 +26,4 @@ export interface Manga {
   url: string;
 
   chapters?: Chapter[];
-
-  state: {
-    error: boolean;
-    loading: boolean;
-    refetching: boolean;
-  };
 }
