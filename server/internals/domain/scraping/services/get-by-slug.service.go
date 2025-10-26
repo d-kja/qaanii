@@ -26,6 +26,7 @@ type GetBySlugResponse struct {
 
 func (self GetBySlugService) Exec(request GetBySlugRequest) (*GetBySlugResponse, error) {
 	scraper, page := self.Scraper.New()
+	defer page.MustClose()
 	defer scraper.MustClose()
 
 	if page == nil {

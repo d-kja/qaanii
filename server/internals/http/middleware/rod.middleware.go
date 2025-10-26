@@ -179,7 +179,7 @@ func (RodMiddleware) QueryRetryX(query string, max_retries int, page *rod.Page, 
 					return
 				}
 
-				utils.LOGGER.INFO.Printf("[RETRY/SINGEX] - An error occurred while querying the element, error: %v\n", err)
+				utils.LOGGER.INFO.Printf("[RETRY/SINGLEX] - An error occurred while querying the element, error: %v\n", err)
 				thread_ch <- false
 				return
 			}
@@ -221,7 +221,7 @@ func (RodMiddleware) QueryRetryX(query string, max_retries int, page *rod.Page, 
 		select {
 		case <-ctx_timeout.Done():
 			{
-				utils.LOGGER.INFO.Printf("[RETRY/SINGLEX] - Context timed out, retrying... (Count: %v) \n", retry_count + 1)
+				utils.LOGGER.INFO.Printf("[RETRY/SINGLEX] - Context timed out, retrying... (Count: %v) \n", retry_count+1)
 				retry_count++
 
 				continue
