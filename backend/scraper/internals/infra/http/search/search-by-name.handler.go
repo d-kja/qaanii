@@ -1,6 +1,7 @@
 package search
 
 import (
+	coreentities "qaanii/scraper/internals/domain/core/core_entities"
 	usecase "qaanii/scraper/internals/domain/search/use_case"
 	"qaanii/shared/utils"
 
@@ -15,7 +16,9 @@ func SearchByNameHandler(ctx *fiber.Ctx) error {
 		return utils.Response{Status: 400, Message: "Query is required"}.GenerateResponse(ctx)
 	}
 
-	service := usecase.SearchByNameService{}
+	service := usecase.SearchByNameService{
+		Scraper: coreentities.NewScraper(),
+	}
 
 	response, err := service.Exec(usecase.SearchByNameRequest{
 		Search: search,

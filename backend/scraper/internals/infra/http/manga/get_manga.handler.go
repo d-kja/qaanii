@@ -1,7 +1,8 @@
 package manga
 
 import (
-	usecase "qaanii/manga/internals/domain/mangas/use_case"
+	coreentities "qaanii/scraper/internals/domain/core/core_entities"
+	usecase "qaanii/scraper/internals/domain/mangas/use_case"
 	"qaanii/shared/utils"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,6 +17,7 @@ func GetMangaHandler(ctx *fiber.Ctx) error {
 	}
 
 	service := usecase.GetMangaBySlugService{
+		Scraper: coreentities.NewScraper(),
 	}
 
 	response, err := service.Exec(usecase.GetMangaBySlugRequest{
