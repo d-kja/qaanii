@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"qaanii/scraper/internals/infra/broker"
@@ -21,17 +22,25 @@ func main() {
 
 	app := fiber.New()
 
-	// INFO: Setup HTTP debug endpoints
-
 	conn, channel := broker.Broker(app)
 	defer channel.Close()
 	defer conn.Close()
 
+	// INFO: Setup HTTP debug endpoints
 	http.Router(app)
 
-	broker.SetupConsumers(broker.ConsumerRequest{
+	ctx := context.Background()
+
+	broker.SetupPublishers(broker.PublisherRequest{
 		Channel:    channel,
 		Connection: conn,
+		Context:    &ctx,
+	})
+
+	broker.SetupSubscribers(broker.SubscriberRequest{
+		Channel:    channel,
+		Connection: conn,
+		Context:    &ctx,
 	})
 
 	port := fmt.Sprintf(":%v", envs["port"])

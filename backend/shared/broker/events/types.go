@@ -7,12 +7,13 @@ import (
 )
 
 type Events string
+type Publisher func(data any) (any, error)
 
 type Metadata struct {
-	Id   string `json:"id"`
-	Type string `json:"type"`
+	Id string `json:"id"`
 }
 
+// Generic type for each event
 type BaseEvent struct {
 	Metadata Metadata `json:"metadata"`
 }

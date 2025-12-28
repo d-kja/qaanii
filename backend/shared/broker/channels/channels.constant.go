@@ -28,7 +28,7 @@ func CreateQueue(name string, channel *amqp.Channel) (*amqp.Queue, error) {
 	return &queue, nil
 }
 
-func PublishMessage(data map[string]any, queue *amqp.Queue, channel *amqp.Channel) (*map[string]any, error) {
+func PublishMessage(data any, queue *amqp.Queue, channel *amqp.Channel) (any, error) {
 	payload, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func PublishMessage(data map[string]any, queue *amqp.Queue, channel *amqp.Channe
 	return &data, nil
 }
 
-func CreateConsumerChannel(queue *amqp.Queue, channel *amqp.Channel) (<-chan amqp.Delivery, error) {
+func CreateSubscriberChannel(queue *amqp.Queue, channel *amqp.Channel) (<-chan amqp.Delivery, error) {
 	messages_ch, err := channel.Consume(
 		queue.Name,
 		"",    // Consumer
