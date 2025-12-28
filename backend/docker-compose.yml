@@ -1,28 +1,26 @@
-version: '3'
-
 services:
-  manga-db:
-    image: bitnami/postgresql:latest # Should tag version later
-    ports:
-      - '5483:5432'
-    environment:
-      - POSTGRES_DB=${MANGA_DB_NAME}
-      - POSTGRES_USER=${MANGA_DB_USER}
-      - POSTGRES_PASSWORD=${MANGA_DB_PASSWORD}
-    # volumes:
-    #   - ./docker/mangas:/docker-entrypoint-initdb.d
-
+  # INFO: Raplced with SQLite
+  # manga-db: 
+  #   image: bitnami/postgresql:latest # Should tag version later
+  #   ports:
+  #     - '5483:5432'
+  #   environment:
+  #     - POSTGRES_DB=${MANGA_DB_NAME}
+  #     - POSTGRES_USER=${MANGA_DB_USER}
+  #     - POSTGRES_PASSWORD=${MANGA_DB_PASSWORD}
+  #   volumes:
+  #     - ./docker/mangas:/docker-entrypoint-initdb.d
 
   # MANGA <-> Scraper
   manga-broker:
-    image: rabbitmq
+    image: rabbitmq:4.2.2-management
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
       # - RABBITMQ_DEFAULT_VHOST=${RABBITMQ_DEFAULT_VHOST}
     ports:
       - 5672:5672
-      - 15672:15672
+      - 15672:15672 # UI
     volumes:
       - broker-data:/var/lib/rabbitmq/
       # - broker-logs:/var/log/rabbitmq
@@ -30,7 +28,7 @@ services:
       - manga
 
 networks:
-  - manga
+  manga:
 
 volumes:
   broker-data:

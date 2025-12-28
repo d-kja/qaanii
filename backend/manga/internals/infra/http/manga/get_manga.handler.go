@@ -1,9 +1,8 @@
 package manga
 
 import (
-	coreentities "qaanii/internals/domain/core/core_entities"
-	usecase "qaanii/internals/domain/mangas/use_case"
-	"qaanii/internals/utils"
+	usecase "qaanii/manga/internals/domain/mangas/use_case"
+	"qaanii/shared/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -16,9 +15,7 @@ func GetMangaHandler(ctx *fiber.Ctx) error {
 		return utils.Response{Status: 400, Message: "Slug is required"}.GenerateResponse(ctx)
 	}
 
-	service := usecase.GetMangaBySlugService{
-		Scraper: coreentities.NewScraper(),
-	}
+	service := usecase.GetMangaBySlugService{}
 
 	response, err := service.Exec(usecase.GetMangaBySlugRequest{
 		Slug: slug,

@@ -1,7 +1,6 @@
 package manga
 
 import (
-	coreentities "qaanii/manga/internals/domain/core/core_entities"
 	usecase "qaanii/manga/internals/domain/mangas/use_case"
 	"qaanii/shared/utils"
 
@@ -19,9 +18,7 @@ func GetChapterHandler(ctx *fiber.Ctx) error {
 		return utils.Response{Status: 400, Message: "Params are required"}.GenerateResponse(ctx)
 	}
 
-	service := usecase.GetMangaChapterService{
-		Scraper: coreentities.NewScraper(),
-	}
+	service := usecase.GetMangaChapterService{}
 
 	response, err := service.Exec(usecase.GetMangaChapterRequest{
 		Slug:    slug,

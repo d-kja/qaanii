@@ -9,6 +9,7 @@ import (
 
 const PREFIX string = "/api/v1"
 
+// INFO: HTTP API is for debugging only
 func Router(app *fiber.App) {
 	app.Route(PREFIX, func(api fiber.Router) {
 		api.Route("/search", search.SearchHandler)
