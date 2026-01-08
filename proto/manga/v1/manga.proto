@@ -1,0 +1,85 @@
+syntax = "proto3";
+package manga.v1;
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+
+  STATUS_ONGOING = 1;
+  STATUS_COMPLETED = 2;
+}
+
+message Page {
+  int32 order = 1;
+
+  string image = 2; // Base64 - expensive
+  string image_type = 3;
+}
+
+message Chapter {
+  string title = 1;
+  string link = 2;
+
+  repeated Page pages = 3;
+  repeated string tags = 4;
+}
+
+message Manga {
+  string url = 1;
+  string slug = 2;
+
+  string name = 3;
+  string description = 4;
+
+  repeated string tags = 5;
+  optional string last_update = 6;
+
+  string image = 7; // Base64 - expensive
+  string image_type = 8;
+
+  optional Status status = 9;
+  repeated Page pages = 10;
+}
+
+// ----------------------------------------------
+
+message GetMangaRequest {
+  string slug = 1;
+}
+
+message GetMangaResponse {
+  optional Manga data = 1;
+}
+
+service MangaService {
+  rpc GetManga(GetMangaRequest) returns (GetMangaResponse) {}
+}
+
+// ---
+
+message GetChapterRequest {
+  string slug = 1;
+  string chapter = 2;
+}
+
+message GetChapterResponse {
+  optional Chapter data = 1;
+}
+
+service ChapterService {
+  rpc GetChapter(GetChapterRequest) returns (GetChapterResponse) {}
+}
+
+// ---
+
+message SearchRequest {
+  string slug = 1;
+  string chapter = 2;
+}
+
+message SearchResponse {
+  optional Chapter data = 1;
+}
+
+service SearchService {
+  rpc Search(SearchRequest) returns (SearchResponse) {}
+}

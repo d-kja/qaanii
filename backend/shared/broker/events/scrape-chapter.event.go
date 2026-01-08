@@ -2,8 +2,8 @@ package events
 
 import "qaanii/shared/entities"
 
-const SCRAPE_CHAPTER_EVENT Events = "@manga/scrape-chapter"
-const SCRAPED_CHAPTER_EVENT Events = "@manga/scraped-chapter"
+const SCRAPE_CHAPTER_EVENT Events = "@chapter/scrape"
+const SCRAPED_CHAPTER_EVENT Events = "@chapter/scraped"
 
 type ScrapeChapterMessage struct {
 	Slug    string `json:"slug"`

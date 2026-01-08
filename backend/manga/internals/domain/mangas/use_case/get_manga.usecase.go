@@ -18,7 +18,9 @@ type GetMangaBySlugResponse struct {
 
 func (self *GetMangaBySlugService) Exec(request GetMangaBySlugRequest) (*GetMangaBySlugResponse, error) {
 	envs := utils.Utils{}.Envs()
-	_ = fmt.Sprintf("%v/%v", envs["base_url"], request.Slug)
+	url := fmt.Sprintf("%v/%v", envs["base_url"], request.Slug)
+
+	// SETUP GRPC TO RETURN A STREAM RESPONSE...
 
 	response := GetMangaBySlugResponse{}
 

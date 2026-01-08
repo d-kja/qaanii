@@ -4,4 +4,5 @@ use (
 	./shared
 	./manga
 	./scraper
+  ../proto
 )
