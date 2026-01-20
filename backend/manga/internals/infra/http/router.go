@@ -10,6 +10,8 @@ import (
 const PREFIX string = "/api/v1"
 
 func Router(app *fiber.App) {
+	SetupMiddlewares(app)
+
 	app.Route(PREFIX, func(api fiber.Router) {
 		api.Route("/search", search.SearchHandler)
 		api.Route("/manga", manga.MangaHandler)

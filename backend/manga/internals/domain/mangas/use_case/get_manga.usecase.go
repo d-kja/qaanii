@@ -1,9 +1,7 @@
 package usecase
 
 import (
-	"fmt"
 	"qaanii/shared/entities"
-	"qaanii/shared/utils"
 )
 
 type GetMangaBySlugService struct {
@@ -17,8 +15,8 @@ type GetMangaBySlugResponse struct {
 }
 
 func (self *GetMangaBySlugService) Exec(request GetMangaBySlugRequest) (*GetMangaBySlugResponse, error) {
-	envs := utils.Utils{}.Envs()
-	url := fmt.Sprintf("%v/%v", envs["base_url"], request.Slug)
+	// envs := utils.Utils{}.Envs()
+	// url := fmt.Sprintf("%v/%v", envs["base_url"], request.Slug)
 
 	// SETUP GRPC TO RETURN A STREAM RESPONSE...
 

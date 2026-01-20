@@ -42,6 +42,8 @@ message Manga {
 
 // ----------------------------------------------
 
+// B4 you judge my ass, I'll approach this with a bad pattern in order to learn rpc server side streaming...
+
 message GetMangaRequest {
   string slug = 1;
 }
@@ -51,7 +53,7 @@ message GetMangaResponse {
 }
 
 service MangaService {
-  rpc GetManga(GetMangaRequest) returns (GetMangaResponse) {}
+  rpc GetManga(GetMangaRequest) returns (stream GetMangaResponse) {}
 }
 
 // ---
@@ -66,7 +68,7 @@ message GetChapterResponse {
 }
 
 service ChapterService {
-  rpc GetChapter(GetChapterRequest) returns (GetChapterResponse) {}
+  rpc GetChapter(GetChapterRequest) returns (stream GetChapterResponse) {}
 }
 
 // ---
@@ -81,5 +83,5 @@ message SearchResponse {
 }
 
 service SearchService {
-  rpc Search(SearchRequest) returns (SearchResponse) {}
+  rpc Search(SearchRequest) returns (stream SearchResponse) {}
 }
