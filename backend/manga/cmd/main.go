@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"qaanii/manga/internals/infra/broker"
-	"qaanii/manga/internals/infra/http"
+	"qaanii/manga/internals/infra/grpc"
 	"qaanii/shared/utils"
 
-	"github.com/gofiber/fiber/v2"
 	dotenv "github.com/joho/godotenv"
 )
 
@@ -20,14 +20,15 @@ func main() {
 
 	envs := utils.Utils{}.Envs()
 
+	controller := grpc.GRPC{}
 	ctx := context.Background()
-	app := fiber.New()
 
-	conn, channel := broker.Broker(app)
+	conn, channel := broker.Broker()
 	defer channel.Close()
 	defer conn.Close()
 
-	http.Router(app)
+	ctx = context.WithValue(ctx, broker.BROKER_CONNECTION, conn)
+	ctx = context.WithValue(ctx, broker.BROKER_CHANNEL, channel)
 
 	broker.SetupPublishers(broker.PublisherRequest{
 		Channel:    channel,
@@ -41,8 +42,17 @@ func main() {
 		Context:    &ctx,
 	})
 
-	port := fmt.Sprintf(":%v", envs["port"])
-	if err := app.Listen(port); err != nil {
+	mux, protocol := controller.Setup(&ctx)
+
+	address := fmt.Sprintf("localhost:%v", envs["port"])
+	server := http.Server{
+		Addr:      address,
+		Handler:   mux,
+		Protocols: protocol,
+	}
+
+	log.Printf("Listening on http://%v\n", address)
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Unable to run server, error: %+v", err)
 	}
 }

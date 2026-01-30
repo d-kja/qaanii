@@ -1,4 +1,4 @@
-module mangabuf
+module qaanii/mangabuf
 
 go 1.25.5
 

@@ -4,7 +4,6 @@ import (
 	"log"
 	"qaanii/shared/utils"
 
-	"github.com/gofiber/fiber/v2"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -13,7 +12,7 @@ const (
 	BROKER_CONNECTION string = "@BROKER/CONNECTION"
 )
 
-func Broker(app *fiber.App) (*amqp.Connection, *amqp.Channel) {
+func Broker() (*amqp.Connection, *amqp.Channel) {
 	envs := utils.Utils{}.Envs()
 	broker_url := envs["broker_url"]
 
@@ -33,13 +32,6 @@ func Broker(app *fiber.App) (*amqp.Connection, *amqp.Channel) {
 		log.Panicf("Broker | Channel connection failed, error: %+v", err)
 		return nil, nil
 	}
-
-	app.Use(func(ctx *fiber.Ctx) error {
-		ctx.Locals(BROKER_CONNECTION, conn)
-		ctx.Locals(BROKER_CHANNEL, channel)
-
-		return ctx.Next()
-	})
 
 	return conn, channel
 }

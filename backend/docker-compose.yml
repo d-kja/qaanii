@@ -11,6 +11,16 @@ services:
   #   volumes:
   #     - ./docker/mangas:/docker-entrypoint-initdb.d
 
+  manga-cache:
+    image: redis:7.4-alpine
+    ports:
+      - 6379:6379
+    environment:
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - 'redis_data:/bitnami/redis/data'
+
   # MANGA <-> Scraper
   manga-broker:
     image: rabbitmq:4.2.2-management
@@ -31,5 +41,7 @@ networks:
   manga:
 
 volumes:
+  redis_data:
+    driver: local
   broker-data:
   # broker-logs:
