@@ -85,7 +85,6 @@ service ChapterService {
 
 message SearchRequest {
   string slug = 1;
-  string chapter = 2;
 }
 
 message SearchResponse {

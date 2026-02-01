@@ -8,7 +8,6 @@ import (
 	"qaanii/manga/internals/infra/broker"
 	"qaanii/manga/internals/infra/grpc"
 	"qaanii/shared/utils"
-
 	dotenv "github.com/joho/godotenv"
 )
 
@@ -56,3 +55,4 @@ func main() {
 		log.Fatalf("Unable to run server, error: %+v", err)
 	}
 }
+
