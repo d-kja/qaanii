@@ -2,7 +2,7 @@ package broker
 
 import (
 	"context"
-	"log"
+	"qaanii/manga/internals/utils"
 	"qaanii/shared/broker/channels"
 	"qaanii/shared/broker/events"
 
@@ -23,23 +23,25 @@ func SetupPublishers(request PublisherRequest) {
 }
 
 func create_publisher(event events.Events, request PublisherRequest) {
+	l := utils.GetLogger()
+
 	queue, err := channels.CreateQueue(string(event), request.Channel)
 	if err != nil {
-		log.Panicf("Broker publisher | unable to create queue [%v], error: %+v\n", event, err)
+		l.Panicf("[BROKER/PUBLISHER] - unable to create queue [%v], error: %+v", event, err)
 		return
 	}
 
 	var handler events.Publisher = func(data any) (any, error) {
 		response, err := channels.PublishMessage(data, queue, request.Channel)
 		if err != nil {
-			log.Printf("Broker publisher | unable to publish message, error: %+v\n", err)
+			l.Infof("[BROKER/PUBLISHER] - unable to publish message, error: %+v", err)
 			return nil, err
 		}
 
-		log.Printf("Broker publisher | %v message sent\n", event)
+		l.Infof("[BROKER/PUBLISHER] - %v message sent", event)
 		return response, nil
 	}
 
-	log.Printf("[%v] Publisher created \n", event)
+	l.Infof("[%v] - publisher created, queue", event)
 	*request.Context = context.WithValue(*request.Context, event, &handler)
 }

@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"qaanii/manga/internals/infra/broker"
 	"qaanii/manga/internals/infra/grpc"
+	internal_utils "qaanii/manga/internals/utils"
 	"qaanii/shared/utils"
+
 	dotenv "github.com/joho/godotenv"
 )
 
@@ -18,6 +20,8 @@ func main() {
 	}
 
 	envs := utils.Utils{}.Envs()
+	logger := internal_utils.Logger{}.SetupLogger()
+	defer logger.Instance.Sync()
 
 	controller := grpc.GRPC{}
 	ctx := context.Background()
@@ -50,9 +54,8 @@ func main() {
 		Protocols: protocol,
 	}
 
-	log.Printf("Listening on http://%v\n", address)
+	logger.Sugar.Infof("Listening on http://%v", address)
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Unable to run server, error: %+v", err)
 	}
 }
-

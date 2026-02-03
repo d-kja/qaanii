@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"qaanii/manga/internals/utils"
 	base_buf "qaanii/mangabuf/gen/manga/v1"
 	buf_handler "qaanii/mangabuf/gen/manga/v1/mangav1connect"
 
@@ -37,6 +38,6 @@ func SetupMangaRoute(mux *http.ServeMux, ctx *context.Context) {
 		ServiceContext: ctx,
 	}
 
-	_, handler := buf_handler.NewMangaServiceHandler(service)
-	mux.Handle("/manga", handler)
+	path, handler := buf_handler.NewMangaServiceHandler(service)
+	mux.Handle(path, utils.Middlewares(handler, ctx))
 }

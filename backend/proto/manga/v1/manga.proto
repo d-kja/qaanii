@@ -53,7 +53,8 @@ message Manga {
 // ----------------------------------------------
 
 message GetMangaRequest {
-  string slug = 1;
+  string id = 1;
+  string slug = 2;
 }
 
 message GetMangaResponse {
@@ -68,8 +69,9 @@ service MangaService {
 // ---
 
 message GetChapterRequest {
-  string slug = 1;
-  string chapter = 2;
+  string id = 1;
+  string slug = 2;
+  string chapter = 3;
 }
 
 message GetChapterResponse {
@@ -84,7 +86,8 @@ service ChapterService {
 // ---
 
 message SearchRequest {
-  string slug = 1;
+  string id = 1;
+  string slug = 2;
 }
 
 message SearchResponse {

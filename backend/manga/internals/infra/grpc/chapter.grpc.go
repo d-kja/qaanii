@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"net/http"
+	"qaanii/manga/internals/utils"
 	base_buf "qaanii/mangabuf/gen/manga/v1"
 	buf_handler "qaanii/mangabuf/gen/manga/v1/mangav1connect"
 
@@ -34,5 +35,5 @@ func SetupChapterRoute(mux *http.ServeMux, ctx *context.Context) {
 	}
 
 	path, handler := buf_handler.NewChapterServiceHandler(service)
-	mux.Handle(path, handler)
+	mux.Handle(path, utils.Middlewares(handler, ctx))
 }

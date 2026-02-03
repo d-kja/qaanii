@@ -1,21 +1,11 @@
 package utils
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"time"
 )
-
-type Middleware func(next http.Handler) http.Handler
-
-func Chain(middleware ...Middleware) http.Handler {
-	var handler http.Handler
-	for i := range middleware {
-		handler = middleware[len(middleware)-1-i](handler)
-	}
-
-	return handler
-}
 
 func Log(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
@@ -25,5 +15,18 @@ func Log(next http.Handler) http.Handler {
 
 		elapsedTime := time.Since(startTime)
 		log.Printf("[%s] [%s] [%s]\n", req.Method, req.URL.Path, elapsedTime)
+	})
+}
+
+func Middlewares(next http.Handler, ctx *context.Context) http.Handler {
+	l := GetLogger()
+
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		url := request.URL
+		method := request.Method
+
+		l.Infof("%v request to %v", method, url)
+
+		next.ServeHTTP(writer, request)
 	})
 }

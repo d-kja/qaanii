@@ -3,7 +3,7 @@ package broker
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"qaanii/manga/internals/utils"
 	"qaanii/scraper/internals/infra/broker/manga"
 	"qaanii/scraper/internals/infra/broker/search"
 	"qaanii/shared/broker/channels"
@@ -33,22 +33,24 @@ func SetupSubscribers(request SubscriberRequest) {
 }
 
 func create_consumer(queue events.Events, request SubscriberRequest, callback func(amqp.Delivery, *context.Context) error, wg *sync.WaitGroup) {
+	l := utils.GetLogger()
+
 	queue_ch, err := channels.CreateQueue(string(queue), request.Channel)
 	if err != nil {
-		log.Panicf("Subscriber | Manga queue creation failed, error: %+v", err)
+		l.Panicf("[BROKER/SUBSCRIBER] - Manga queue creation failed, error: %+v", err)
 		return
 	}
 
 	messages_ch, err := channels.CreateSubscriberChannel(queue_ch, request.Channel)
 	if err != nil {
-		log.Panicf("Subscriber | Unable to setup consumer for %v, error: %+v\n", queue, err)
+		l.Panicf("[BROKER/SUBSCRIBER] - Unable to setup consumer for %v, error: %+v", queue, err)
 		return
 	}
 
 	lock_ch := make(chan bool)
 
 	go handle_messages(messages_ch, request.Context, callback)
-	log.Printf("[%v] Subscriber created \n", queue)
+	l.Infof("[%v] - subscriber created", queue)
 
 	wg.Done()
 
@@ -56,22 +58,24 @@ func create_consumer(queue events.Events, request SubscriberRequest, callback fu
 }
 
 func handle_messages(messages_ch <-chan amqp.Delivery, ctx *context.Context, callback func(amqp.Delivery, *context.Context) error) {
+	l := utils.GetLogger()
+
 	for raw_message := range messages_ch {
 		message := events.BaseEvent{}
 
 		// Validate initial event
 		err := json.Unmarshal(raw_message.Body, &message)
 		if err != nil {
-			log.Printf("Subscriber | Unable to parse message body, \n - error: %+v\n - payload: %v\n", err, string(raw_message.Body))
+			l.Errorf("[BROKER/SUBSCRIBER] - Unable to parse message body, \n - error: %+v - payload: %v", err, string(raw_message.Body))
 			continue
 		}
 
 		if len(message.Metadata.Id) == 0 {
-			log.Printf("Subscriber | Invalid event, skipping: %v\n", string(raw_message.Body))
+			l.Errorf("[BROKER/SUBSCRIBER] - Invalid event, skipping: %v", string(raw_message.Body))
 
 			err = raw_message.Ack(false)
 			if err != nil {
-				log.Printf("Subscriber | Unable to acknowledge message, error: %+v\n", err)
+				l.Errorf("[BROKER/SUBSCRIBER] - Unable to acknowledge message, error: %+v", err)
 			}
 
 			continue
@@ -79,13 +83,13 @@ func handle_messages(messages_ch <-chan amqp.Delivery, ctx *context.Context, cal
 
 		err = callback(raw_message, ctx)
 		if err != nil {
-			log.Printf("Subscriber | unable to process message, error: %+v\n", err)
+			l.Errorf("[BROKER/SUBSCRIBER] - unable to process message, error: %+v", err)
 			continue
 		}
 
 		err = raw_message.Ack(false)
 		if err != nil {
-			log.Printf("Subscriber | Unable to acknowledge message, error: %+v\n", err)
+			l.Errorf("[BROKER/SUBSCRIBER] - Unable to acknowledge message, error: %+v", err)
 		}
 	}
 }
