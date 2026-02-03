@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"qaanii/manga/internals/utils"
-	"qaanii/scraper/internals/infra/broker/manga"
-	"qaanii/scraper/internals/infra/broker/search"
 	"qaanii/shared/broker/channels"
 	"qaanii/shared/broker/events"
 	"sync"
@@ -24,10 +22,10 @@ func SetupSubscribers(request SubscriberRequest) {
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 
-	go create_consumer(events.SCRAPED_CHAPTER_EVENT, request, manga.ScrapeMangaSubscriber, &wg)
-	go create_consumer(events.SCRAPED_MANGA_EVENT, request, manga.ScrapeChapterSubscriber, &wg)
-
-	go create_consumer(events.SEARCHED_MANGA_EVENT, request, search.SearchByNameSubscriber, &wg)
+	// go create_consumer(events.SCRAPED_CHAPTER_EVENT, request, ScrapeMangaSubscriber, &wg)
+	// go create_consumer(events.SCRAPED_MANGA_EVENT, request, manga.ScrapeChapterSubscriber, &wg)
+	//
+	// go create_consumer(events.SEARCHED_MANGA_EVENT, request, search.SearchByNameSubscriber, &wg)
 
 	wg.Wait()
 }
@@ -87,7 +85,7 @@ func handle_messages(messages_ch <-chan amqp.Delivery, ctx *context.Context, cal
 			continue
 		}
 
-		err = raw_message.Ack(false)
+		err = raw_message.Ack(true)
 		if err != nil {
 			l.Errorf("[BROKER/SUBSCRIBER] - Unable to acknowledge message, error: %+v", err)
 		}

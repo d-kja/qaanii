@@ -92,7 +92,7 @@ message SearchRequest {
 
 message SearchResponse {
   RequestStatus status = 1;
-  optional Chapter data = 2;
+  repeated Manga data = 2;
 }
 
 service SearchService {

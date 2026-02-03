@@ -82,7 +82,7 @@ func handle_messages(messages_ch <-chan amqp.Delivery, ctx *context.Context, cal
 			continue
 		}
 
-		err = raw_message.Ack(false)
+		err = raw_message.Ack(true)
 		if err != nil {
 			log.Printf("Subscriber | Unable to acknowledge message, error: %+v\n", err)
 		}
