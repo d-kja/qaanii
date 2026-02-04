@@ -47,7 +47,7 @@ message Manga {
   string image_type = 8;
 
   optional Status status = 9;
-  repeated Page pages = 10;
+  repeated Chapter chapters = 10;
 }
 
 // ----------------------------------------------

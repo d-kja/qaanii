@@ -9,6 +9,7 @@ import (
 	"qaanii/manga/internals/infra/broker"
 	"qaanii/manga/internals/utils"
 	base_buf "qaanii/mangabuf/gen/manga/v1"
+	mangav1 "qaanii/mangabuf/gen/manga/v1"
 	buf_handler "qaanii/mangabuf/gen/manga/v1/mangav1connect"
 	"qaanii/shared/broker/channels"
 	"qaanii/shared/broker/events"
@@ -101,9 +102,15 @@ func (service SearchService) Search(_ context.Context, request *base_buf.SearchR
 				return err
 			}
 
+			mangas := []*mangav1.Manga{}
+			for _, manga := range message.Data {
+				buf_manga := manga.ToProtobuf()
+				mangas = append(mangas, &buf_manga)
+			}
+
 			response = base_buf.SearchResponse{
 				Status: base_buf.RequestStatus_REQUEST_STATUS_COMPLETED,
-				Data:   nil,
+				Data:   mangas,
 			}
 
 			err = stream.Send(&response)
