@@ -5,41 +5,47 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"qaanii/manga/internals/infra/broker"
+	"os/signal"
+	internal_broker "qaanii/manga/internals/infra/broker"
 	"qaanii/manga/internals/infra/grpc"
-	internal_utils "qaanii/manga/internals/utils"
+	"qaanii/shared/broker"
 	"qaanii/shared/utils"
+	"syscall"
+	"time"
 
 	dotenv "github.com/joho/godotenv"
 )
 
 func main() {
+	signal_ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	err := dotenv.Load()
 	if err != nil {
 		log.Fatalf("Unable to load environment variables, error: %+v", err)
 	}
 
-	envs := utils.Utils{}.Envs()
-	logger := internal_utils.Logger{}.SetupLogger()
-	defer logger.Instance.Sync()
+	envs := utils.Envs()
 
 	controller := grpc.GRPC{}
 	ctx := context.Background()
 
-	conn, channel := broker.Broker()
+	broker_url := envs["broker_url"]
+	conn, channel := broker.Broker(broker_url)
+
 	defer channel.Close()
 	defer conn.Close()
 
-	ctx = context.WithValue(ctx, broker.BROKER_CONNECTION, conn)
-	ctx = context.WithValue(ctx, broker.BROKER_CHANNEL, channel)
+	ctx = context.WithValue(ctx, internal_broker.BROKER_CONNECTION, conn)
+	ctx = context.WithValue(ctx, internal_broker.BROKER_CHANNEL, channel)
 
-	broker.SetupPublishers(broker.PublisherRequest{
+	internal_broker.SetupPublishers(broker.PublisherRequest{
 		Channel:    channel,
 		Connection: conn,
 		Context:    &ctx,
 	})
 
-	broker.SetupSubscribers(broker.SubscriberRequest{
+	internal_broker.SetupSubscribers(broker.SubscriberRequest{
 		Channel:    channel,
 		Connection: conn,
 		Context:    &ctx,
@@ -54,8 +60,19 @@ func main() {
 		Protocols: protocol,
 	}
 
-	logger.Sugar.Infof("Listening on http://%v", address)
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Unable to run server, error: %+v", err)
-	}
+	go func() {
+		log.Printf("[SERVER] - Listening on http://%v\n", address)
+
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatalf("[SERVER] - Unable to run, error: %+v", err)
+		}
+	}()
+
+	<-signal_ctx.Done()
+	log.Printf("[SERVER] - Shutting down...")
+
+	shutdown_ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	server.Shutdown(shutdown_ctx)
 }

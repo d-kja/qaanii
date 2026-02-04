@@ -17,26 +17,26 @@ func ScrapeChapterSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context
 
 	scraped_chapter_publisher, ok := ctx.Value(events.SCRAPED_CHAPTER_EVENT).(*events.Publisher)
 	if !ok {
-		log.Println("Scrape chapter consumer | Unable to retrieve scraped chapter publisher.")
+		log.Println("[SUBSCRIBER/CHAPTER] - Unable to retrieve scraped chapter publisher.")
 		return errors.New("Unable to retrieve scrape chapter publisher")
 	}
 
 	message := events.ScrapeChapterMessage{}
 	err := json.Unmarshal(raw_message.Body, &message)
 	if err != nil {
-		log.Printf("Scrape chapter consumer | unable to parse message body, error: %+v\n", err)
+		log.Printf("[SUBSCRIBER/CHAPTER] - unable to parse message body, error: %+v\n", err)
 		return err
 	}
 
 	slug_len := len(message.Slug)
 	if slug_len == 0 {
-		log.Println("Scrape chapter consumer | missing slug parameter")
+		log.Println("[SUBSCRIBER/CHAPTER] - missing slug parameter")
 		return errors.New("Missing slug parameter")
 	}
 
 	chapter_len := len(message.Chapter)
 	if chapter_len == 0 {
-		log.Println("Scrape chapter consumer | missing chapter parameter")
+		log.Println("[SUBSCRIBER/CHAPTER] - missing chapter parameter")
 		return errors.New("Missing chapter parameter")
 	}
 
@@ -58,7 +58,7 @@ func ScrapeChapterSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context
 
 	_, err = (*scraped_chapter_publisher)(pub_message)
 	if err != nil {
-		log.Printf("Scrape manga publisher | Unable to publish scraped results, error: %+v\n", err)
+		log.Printf("[SUBSCRIBER/CHAPTER] - Unable to publish scraped results, error: %+v\n", err)
 		return errors.New("Unable to publish results")
 	}
 

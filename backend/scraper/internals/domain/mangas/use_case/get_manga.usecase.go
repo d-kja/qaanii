@@ -23,7 +23,7 @@ type GetMangaBySlugResponse struct {
 
 func (self *GetMangaBySlugService) Exec(request GetMangaBySlugRequest) (*GetMangaBySlugResponse, error) {
 	defer self.Scraper.Browser.MustClose()
-	envs := utils.Utils{}.Envs()
+	envs := utils.Envs()
 
 	url := fmt.Sprintf("%v/%v", envs["base_url"], request.Slug)
 	page := self.Scraper.NewPage(url)

@@ -18,7 +18,7 @@ type GetMangaChapterResponse struct {
 }
 
 func (self *GetMangaChapterService) Exec(request GetMangaChapterRequest) (*GetMangaChapterResponse, error) {
-	envs := utils.Utils{}.Envs()
+	envs := utils.Envs()
 	_ = fmt.Sprintf("%v/%v/%v", envs["base_url"], request.Slug, request.Chapter)
 
 	response := GetMangaChapterResponse{}

@@ -26,7 +26,7 @@ type SearchByNameResponse struct {
 
 func (self *SearchByNameService) Exec(request SearchByNameRequest) (*SearchByNameResponse, error) {
 	defer self.Scraper.Browser.MustClose()
-	envs := utils.Utils{}.Envs()
+	envs := utils.Envs()
 
 	search := url.QueryEscape(request.Search)
 	url := fmt.Sprintf("%v/search?q=%v", envs["base_url"], search)

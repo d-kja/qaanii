@@ -17,20 +17,20 @@ func ScrapeMangaSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context) 
 
 	scraped_manga_publisher, ok := ctx.Value(events.SCRAPED_MANGA_EVENT).(*events.Publisher)
 	if !ok {
-		log.Println("Scrape manga consumer | Unable to retrieve scraped manga publisher.")
+		log.Println("[SUBSCRIBER/MANGA] - Unable to retrieve scraped manga publisher.")
 		return errors.New("Unable to retrieve scrape manga publisher")
 	}
 
 	message := events.ScrapeMangaMessage{}
 	err := json.Unmarshal(raw_message.Body, &message)
 	if err != nil {
-		log.Printf("Scrape manga consumer | unable to parse message body, error: %+v\n", err)
+		log.Printf("[SUBSCRIBER/MANGA] - unable to parse message body, error: %+v\n", err)
 		return err
 	}
 
 	slug_len := len(message.Slug)
 	if slug_len == 0 {
-		log.Println("Scrape manga consumer | missing slug parameter")
+		log.Println("[SUBSCRIBER/MANGA] - missing slug parameter")
 		return errors.New("Missing slug parameter")
 	}
 
@@ -41,6 +41,10 @@ func ScrapeMangaSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context) 
 	response, err := service.Exec(usecase.GetMangaBySlugRequest{
 		Slug: message.Slug,
 	})
+	if err != nil {
+		log.Printf("[SUBSCRIBER/MANGA] - Unable to retrieve scraped results, error: %+v\n", err)
+		return errors.New("Unable to retrieve results")
+	}
 
 	pub_message := events.ScrapedMangaMessage{
 		BaseEvent: events.BaseEvent{},
@@ -51,7 +55,7 @@ func ScrapeMangaSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context) 
 
 	_, err = (*scraped_manga_publisher)(pub_message)
 	if err != nil {
-		log.Printf("Scrape manga publisher | Unable to publish scraped results, error: %+v\n", err)
+		log.Printf("[SUBSCRIBER/MANGA] - Unable to publish scraped results, error: %+v\n", err)
 		return errors.New("Unable to publish results")
 	}
 

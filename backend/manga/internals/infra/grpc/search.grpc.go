@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"qaanii/manga/internals/utils"
 	base_buf "qaanii/mangabuf/gen/manga/v1"
@@ -18,12 +19,11 @@ type SearchService struct {
 }
 
 func (service SearchService) Search(_ context.Context, request *base_buf.SearchRequest, stream *connect.ServerStream[base_buf.SearchResponse]) error {
-	l := utils.GetLogger()
 	ctx := *service.ServiceContext
 
 	queue_publisher_raw, ok := ctx.Value(events.SEARCH_MANGA_EVENT).(*events.Publisher)
 	if !ok {
-		l.Errorf("[PUBLISHER] - Queue (%v) wasn't found", events.SEARCH_MANGA_EVENT)
+		log.Printf("[PUBLISHER] - Queue (%v) wasn't found\n", events.SEARCH_MANGA_EVENT)
 		return errors.New("Invalid queue publisher")
 	}
 
@@ -36,10 +36,13 @@ func (service SearchService) Search(_ context.Context, request *base_buf.SearchR
 
 	err := stream.Send(&response)
 	if err != nil {
-		l.Errorf("[PUBLISHER] - Unable to send initial status, error %+v", err)
+		log.Printf("[PUBLISHER] - Unable to send initial status, error %+v\n", err)
 		return err
 	}
 
+	// TODO: Search with REDIS for idempotency key/id
+
+	// If not found, send message to queue for async work
 	message := events.SearchMangaMessage{
 		Query: request.Slug,
 		BaseEvent: events.BaseEvent{
@@ -49,12 +52,11 @@ func (service SearchService) Search(_ context.Context, request *base_buf.SearchR
 		},
 	}
 
-	// Send async message and wait for REDIS update.
 	queue_publisher(message)
 
-	// Retrieve REDIS update every 5-10s
-	// TODO: implement REDIS conn
+	// TODO: Wait for queue to reply and update status
 
+	// Mock example
 	response = base_buf.SearchResponse{
 		Status: base_buf.RequestStatus_REQUEST_STATUS_COMPLETED,
 		Data:   nil,
@@ -62,7 +64,7 @@ func (service SearchService) Search(_ context.Context, request *base_buf.SearchR
 
 	err = stream.Send(&response)
 	if err != nil {
-		l.Errorf("[PUBLISHER] - Unable to send status update, error %+v", err)
+		log.Printf("[PUBLISHER] - Unable to send status update, error %+v\n", err)
 		return err
 	}
 

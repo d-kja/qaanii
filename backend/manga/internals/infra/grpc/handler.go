@@ -21,6 +21,10 @@ func (GRPC) Setup(service_context *context.Context) (*http.ServeMux, *http.Proto
 }
 
 func Router(mux *http.ServeMux, ctx *context.Context) {
+	mux.Handle("GET /health/", http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("Ok"))
+	}))
+
 	SetupSearchRoute(mux, ctx)
 	SetupMangaRoute(mux, ctx)
 	SetupChapterRoute(mux, ctx)

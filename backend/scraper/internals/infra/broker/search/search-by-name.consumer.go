@@ -17,20 +17,20 @@ func SearchByNameSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context)
 
 	searched_publisher, ok := ctx.Value(events.SEARCHED_MANGA_EVENT).(*events.Publisher)
 	if !ok {
-		log.Println("Search consumer | Unable to retrieve searched manga publisher.")
+		log.Println("[SUBSCRIBER/SEARCH] - Unable to retrieve searched manga publisher.")
 		return errors.New("Unable to retrieve search results publisher")
 	}
 
 	message := events.SearchMangaMessage{}
 	err := json.Unmarshal(raw_message.Body, &message)
 	if err != nil {
-		log.Printf("Search consumer | unable to parse message body, error: %+v\n", err)
+		log.Printf("[SUBSCRIBER/SEARCH] - unable to parse message body, error: %+v\n", err)
 		return err
 	}
 
 	query_len := len(message.Query)
 	if query_len == 0 {
-		log.Println("Search consumer | missing query parameter")
+		log.Println("[SUBSCRIBER/SEARCH] - missing query parameter")
 		return errors.New("Missing query parameter")
 	}
 
@@ -51,7 +51,7 @@ func SearchByNameSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context)
 
 	_, err = (*searched_publisher)(pub_message)
 	if err != nil {
-		log.Printf("Search publisher | Unable to publish search results, error: %+v\n", err)
+		log.Printf("[SUBSCRIBER/SEARCH] - Unable to publish search results, error: %+v\n", err)
 		return errors.New("Unable to publish results")
 	}
 
