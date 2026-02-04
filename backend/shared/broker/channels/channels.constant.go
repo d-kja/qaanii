@@ -28,6 +28,23 @@ func CreateQueue(name string, channel *amqp.Channel) (*amqp.Queue, error) {
 	return &queue, nil
 }
 
+// Single run queue, for async work mixed with grpc stream...
+func CreateReplyQueue(channel *amqp.Channel) (*amqp.Queue, error) {
+	queue, err := channel.QueueDeclare(
+		"", // Generate random name
+		false,
+		false,
+		true, // Exclusive
+		false,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &queue, nil
+}
+
 func PublishMessage(data any, queue *amqp.Queue, channel *amqp.Channel) (any, error) {
 	payload, err := json.Marshal(data)
 	if err != nil {

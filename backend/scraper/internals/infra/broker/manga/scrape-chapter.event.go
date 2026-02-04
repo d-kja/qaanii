@@ -48,6 +48,10 @@ func ScrapeChapterSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context
 		Slug:    message.Slug,
 		Chapter: message.Chapter,
 	})
+	if err != nil {
+		log.Printf("[SUBSCRIBER/CHAPTER] - Unable to retrieve chapter result, error: %+v\n", err)
+		return errors.New("Unable to retrieve chapter")
+	}
 
 	pub_message := events.ScrapedChapterMessage{
 		BaseEvent: events.BaseEvent{},

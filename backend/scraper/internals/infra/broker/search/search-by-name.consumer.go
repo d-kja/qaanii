@@ -41,6 +41,10 @@ func SearchByNameSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context)
 	response, err := service.Exec(usecase.SearchByNameRequest{
 		Search: message.Query,
 	})
+	if err != nil {
+		log.Printf("[SUBSCRIBER/SEARCH] - Unable to retrieve search results, error: %+v\n", err)
+		return errors.New("Unable to retrieve search results")
+	}
 
 	pub_message := events.SearchedMangaMessage{
 		BaseEvent: events.BaseEvent{},

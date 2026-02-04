@@ -10,7 +10,8 @@ type Events string
 type Publisher func(data any) (any, error)
 
 type Metadata struct {
-	Id string `json:"id"`
+	Id    string `json:"id"`
+	Reply string `json:"reply"`
 }
 
 // Generic type for each event

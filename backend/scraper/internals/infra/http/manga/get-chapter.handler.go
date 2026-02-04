@@ -13,7 +13,7 @@ func GetChapterHandler(ctx *fiber.Ctx) error {
 	chapter := ctx.Params("chapter")
 
 	slug_len := len(slug)
-	chapter_len := len(slug)
+	chapter_len := len(chapter)
 
 	if slug_len == 0 || chapter_len == 0 {
 		return utils.Response{Status: 400, Message: "Params are required"}.GenerateResponse(ctx)

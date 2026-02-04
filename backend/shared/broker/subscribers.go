@@ -6,7 +6,6 @@ import (
 	"log"
 	"qaanii/shared/broker/channels"
 	"qaanii/shared/broker/events"
-	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -17,7 +16,7 @@ type SubscriberRequest struct {
 	Context    *context.Context
 }
 
-func CreateConsumer(queue events.Events, request SubscriberRequest, callback func(amqp.Delivery, *context.Context) error, wg *sync.WaitGroup) {
+func CreateConsumer(queue events.Events, request SubscriberRequest, callback func(amqp.Delivery, *context.Context) error) {
 	queue_ch, err := channels.CreateQueue(string(queue), request.Channel)
 
 	if err != nil {
@@ -33,8 +32,6 @@ func CreateConsumer(queue events.Events, request SubscriberRequest, callback fun
 
 	go HandleMessages(messages_ch, request.Context, callback)
 	log.Printf("[%v] - subscriber created\n", queue)
-
-	wg.Done()
 }
 
 func HandleMessages(messages_ch <-chan amqp.Delivery, ctx *context.Context, callback func(amqp.Delivery, *context.Context) error) {
@@ -61,7 +58,7 @@ func HandleMessages(messages_ch <-chan amqp.Delivery, ctx *context.Context, call
 
 		err = callback(raw_message, ctx)
 		if err != nil {
-			log.Panicf("[BROKER/SUBSCRIBER] - unable to process message, error: %+v\n", err)
+			log.Printf("[BROKER/SUBSCRIBER] - unable to process message, error: %+v\n", err)
 
 			err = raw_message.Ack(false)
 			if err != nil {
@@ -71,7 +68,7 @@ func HandleMessages(messages_ch <-chan amqp.Delivery, ctx *context.Context, call
 			continue
 		}
 
-		err = raw_message.Ack(true)
+		err = raw_message.Ack(false)
 		if err != nil {
 			log.Printf("[BROKER/SUBSCRIBER] - Unable to acknowledge message, error: %+v\n", err)
 		}
