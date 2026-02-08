@@ -37,12 +37,6 @@ func main() {
 
 	ctx := context.Background()
 
-	internal_broker.SetupPublishers(broker.PublisherRequest{
-		Channel:    channel,
-		Connection: conn,
-		Context:    &ctx,
-	})
-
 	internal_broker.SetupSubscribers(broker.SubscriberRequest{
 		Channel:    channel,
 		Connection: conn,

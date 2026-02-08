@@ -48,7 +48,7 @@ func HandleMessages(messages_ch <-chan amqp.Delivery, ctx *context.Context, call
 		if len(message.Metadata.Id) == 0 {
 			log.Printf("[BROKER/SUBSCRIBER] - Invalid event, skipping: %v\n", string(raw_message.Body))
 
-			err = raw_message.Ack(false)
+			err = raw_message.Nack(false, false) // Invalid event, we can't process it.
 			if err != nil {
 				log.Printf("[BROKER/SUBSCRIBER] - Unable to acknowledge message, error: %+v\n", err)
 			}
@@ -60,7 +60,7 @@ func HandleMessages(messages_ch <-chan amqp.Delivery, ctx *context.Context, call
 		if err != nil {
 			log.Printf("[BROKER/SUBSCRIBER] - unable to process message, error: %+v\n", err)
 
-			err = raw_message.Ack(false)
+			err = raw_message.Nack(false, true)
 			if err != nil {
 				log.Printf("[BROKER/SUBSCRIBER] - Unable to acknowledge message, error: %+v\n", err)
 			}

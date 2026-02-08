@@ -4,24 +4,30 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"qaanii/manga/internals/constants"
+	usecase "qaanii/manga/internals/domain/search/use_case"
 	"qaanii/manga/internals/infra/broker"
 	"qaanii/manga/internals/utils"
 	base_buf "qaanii/mangabuf/gen/manga/v1"
-	mangav1 "qaanii/mangabuf/gen/manga/v1"
 	buf_handler "qaanii/mangabuf/gen/manga/v1/mangav1connect"
-	"qaanii/shared/broker/channels"
 	"qaanii/shared/broker/events"
-	"time"
 
 	"connectrpc.com/connect"
-	"github.com/rabbitmq/amqp091-go"
+	amq "github.com/rabbitmq/amqp091-go"
+	"github.com/redis/go-redis/v9"
 )
 
-type SearchService struct {
-	ServiceContext *context.Context
+type SearchHandler struct {
+	HandlerContext *context.Context
 	buf_handler.SearchServiceHandler
+}
+
+var initial_status base_buf.SearchResponse = base_buf.SearchResponse{
+	Status: base_buf.RequestStatus_REQUEST_STATUS_LOADING,
+	Data:   nil,
 }
 
 var err_response base_buf.SearchResponse = base_buf.SearchResponse{
@@ -29,117 +35,130 @@ var err_response base_buf.SearchResponse = base_buf.SearchResponse{
 	Data:   nil,
 }
 
-func (service SearchService) Search(_ context.Context, request *base_buf.SearchRequest, stream *connect.ServerStream[base_buf.SearchResponse]) error {
-	ctx := *service.ServiceContext
+const SEARCH_KEY string = "SEARCH"
 
-	channel, ok := ctx.Value(broker.BROKER_CHANNEL).(*amqp091.Channel)
+var IDEMPOTENCY_KEY string = fmt.Sprintf("%v/IDEMPOTENCY_KEY", SEARCH_KEY)
+
+type SearchCache struct {
+	Status base_buf.RequestStatus
+	Data   []*base_buf.Manga
+}
+
+func (handler SearchHandler) Search(r_ctx context.Context, request *base_buf.SearchRequest, stream *connect.ServerStream[base_buf.SearchResponse]) error {
+	service := usecase.SearchByNameService{}
+	ctx := *handler.HandlerContext
+
+	redis_ch, ok := ctx.Value(constants.REDIS_URL).(*redis.Client)
 	if !ok {
-		log.Printf("[PUBLISHER] - AMQ Channel not found for %v\n", events.SEARCH_MANGA_EVENT)
+		return errors.New("Invalid redis client")
+	}
+
+	err := stream.Send(&initial_status)
+	if err != nil {
+		log.Printf("[SEARCH] - Unable to send initial status, error %+v\n", err)
+		return err
+	}
+
+	// TODO: Abstract into a separate function
+	idempotency, err := redis_ch.Get(r_ctx, fmt.Sprintf("%v/%v/%v", IDEMPOTENCY_KEY, request.Slug, request.Id)).Result()
+	if err == nil {
+		cache := SearchCache{}
+
+		cache_err := json.Unmarshal([]byte(idempotency), &cache)
+		if cache_err == nil {
+			err := stream.Send(&base_buf.SearchResponse{
+				Status: cache.Status,
+				Data:   cache.Data,
+			})
+
+			if err != nil {
+				log.Printf("[SEARCH] - Unable to send idempotency cache, error %+v\n", err)
+				return err
+			}
+
+			return nil
+		}
+
+		log.Printf("[SEARCH] - Unable to parse idempotency cache, error %+v\n", err)
+	}
+
+	// TODO: Abstract into a separate function
+	query_cache, err := redis_ch.Get(r_ctx, fmt.Sprintf("%v/%v", SEARCH_KEY, request.Slug)).Result()
+	if err == nil {
+		cache := SearchCache{}
+
+		cache_err := json.Unmarshal([]byte(query_cache), &cache)
+		if cache_err == nil {
+			err := stream.Send(&base_buf.SearchResponse{
+				Status: cache.Status,
+				Data:   cache.Data,
+			})
+
+			if err != nil {
+				log.Printf("[SEARCH] - Unable to send saerch cache, error %+v\n", err)
+				return err
+			}
+
+			return nil
+		}
+
+		log.Printf("[SEARCH] - Unable to parse search cache, error %+v\n", err)
+	}
+
+	channel, ok := ctx.Value(broker.BROKER_CHANNEL).(*amq.Channel)
+	if !ok {
+		log.Printf("[SEARCH] - AMQ Channel not found for %v\n", events.SEARCH_MANGA_EVENT)
 		return errors.New("Invalid queue publisher")
 	}
 
 	queue_publisher_raw, ok := ctx.Value(events.SEARCH_MANGA_EVENT).(*events.Publisher)
 	if !ok {
-		log.Printf("[PUBLISHER] - Queue (%v) wasn't found\n", events.SEARCH_MANGA_EVENT)
+		log.Printf("[SEARCH] - Queue (%v) wasn't found\n", events.SEARCH_MANGA_EVENT)
 		return errors.New("Invalid queue publisher")
 	}
 
 	queue_publisher := *queue_publisher_raw
+	service_request := usecase.SearchByNameRequest{
+		Id:     request.Id,
+		Search: request.Slug,
+
+		Channel:   channel,
+		Publisher: queue_publisher,
+	}
+
+	service_response, err := service.Exec(service_request)
+	if err != nil {
+		err := stream.Send(&err_response)
+
+		if err != nil {
+			log.Printf("[SEARCH] - Unable to send service error status, error %+v\n", err)
+			return err
+		}
+	}
+
+	mangas := []*base_buf.Manga{}
+	for _, manga := range service_response.Mangas {
+		manga_buf := manga.ToProtobuf()
+		mangas = append(mangas, &manga_buf)
+	}
 
 	response := base_buf.SearchResponse{
-		Status: base_buf.RequestStatus_REQUEST_STATUS_LOADING,
-		Data:   nil,
+		Status: base_buf.RequestStatus_REQUEST_STATUS_COMPLETED,
+		Data:   mangas,
 	}
 
-	err := stream.Send(&response)
+	err = stream.Send(&response)
 	if err != nil {
-		log.Printf("[PUBLISHER] - Unable to send initial status, error %+v\n", err)
+		log.Printf("[SEARCH] - Unable to send service response, error %+v\n", err)
 		return err
-	}
-
-	// TODO: Search with REDIS for idempotency key/id
-
-	// If not found, send message to queue for async work
-	reply_queue, err := channels.CreateReplyQueue(channel)
-	if err != nil {
-		log.Printf("[PUBLISHER] - Unable to create reply queue, error %+v\n", err)
-		return err
-	}
-
-	message := events.SearchMangaMessage{
-		Query: request.Slug,
-		BaseEvent: events.BaseEvent{
-			Metadata: events.Metadata{
-				Id:    request.Id,
-				Reply: reply_queue.Name,
-			},
-		},
-	}
-
-	queue_publisher(message)
-
-	reply_message, err := channel.Consume(reply_queue.Name, "", true, true, false, false, nil)
-	if err != nil {
-		log.Printf("[PUBLISHER] - Unable to consume reply queue messages, error %+v\n", err)
-		return err
-	}
-
-	select {
-
-	case reply := <-reply_message:
-		{
-			message := events.SearchedMangaMessage{}
-			err := json.Unmarshal(reply.Body, &message)
-			if err != nil {
-				log.Printf("[PUBLISHER] - Unable to parse reply body, error %+v\n", err)
-
-				err = stream.Send(&err_response)
-				if err != nil {
-					log.Printf("[PUBLISHER] - Unable to send status update, error %+v\n", err)
-					return err
-				}
-
-				return err
-			}
-
-			mangas := []*mangav1.Manga{}
-			for _, manga := range message.Data {
-				buf_manga := manga.ToProtobuf()
-				mangas = append(mangas, &buf_manga)
-			}
-
-			response = base_buf.SearchResponse{
-				Status: base_buf.RequestStatus_REQUEST_STATUS_COMPLETED,
-				Data:   mangas,
-			}
-
-			err = stream.Send(&response)
-			if err != nil {
-				log.Printf("[PUBLISHER] - Unable to send status update, error %+v\n", err)
-				return err
-			}
-
-			break
-		}
-
-	case <-time.After(60 * time.Second):
-		{
-			err = stream.Send(&err_response)
-			if err != nil {
-				log.Printf("[PUBLISHER] - Unable to send status update, error %+v\n", err)
-				return err
-			}
-
-			break
-		}
 	}
 
 	return nil
 }
 
 func SetupSearchRoute(mux *http.ServeMux, ctx *context.Context) {
-	service := SearchService{
-		ServiceContext: ctx,
+	service := SearchHandler{
+		HandlerContext: ctx,
 	}
 
 	path, handler := buf_handler.NewSearchServiceHandler(service)

@@ -1,46 +1,81 @@
 package usecase
 
 import (
-	// "context"
-	// "fmt"
-	// "net/url"
+	"encoding/json"
+	"errors"
+	"log"
+	base_buf "qaanii/mangabuf/gen/manga/v1"
+	"qaanii/shared/broker/channels"
+	"qaanii/shared/broker/events"
 	"qaanii/shared/entities"
-	// "qaanii/shared/utils"
+	"time"
 
-	// amq "github.com/rabbitmq/amqp091-go"
+	"github.com/rabbitmq/amqp091-go"
 )
 
 type SearchByNameService struct {
 }
 
 type SearchByNameRequest struct {
-	Search string
-	// Context *context.Context
+	Id        string
+	Search    string
+	Channel   *amqp091.Channel
+	Publisher events.Publisher
 }
 type SearchByNameResponse struct {
 	Mangas []entities.Manga
 }
 
+var err_response base_buf.SearchResponse = base_buf.SearchResponse{
+	Status: base_buf.RequestStatus_REQUEST_STATUS_ERROR,
+	Data:   nil,
+}
+
 func (self *SearchByNameService) Exec(request SearchByNameRequest) (*SearchByNameResponse, error) {
-	// envs := utils.Utils{}.Envs()
-
-	// ctx := *request.Context
-	// search_manga_publisher, ok := ctx.Value()
-
-	// search := url.QueryEscape(request.Search)
-	// url := fmt.Sprintf("%v/search?q=%v", envs["base_url"], search)
-
-	mangas := []entities.Manga{}
-
-	// Send event to message broker
-	
-	// amq.
-
-	// Lock thread waiting for channel response with timeout logic.
-
-	response := SearchByNameResponse{
-		Mangas: mangas, 
+	reply_queue, err := channels.CreateReplyQueue(request.Channel)
+	if err != nil {
+		log.Printf("[SEARCH] - Unable to create reply queue, error %+v\n", err)
+		return nil, err
 	}
 
-	return &response, nil
+	message := events.SearchMangaMessage{
+		Query: request.Search,
+		BaseEvent: events.BaseEvent{
+			Metadata: events.Metadata{
+				Id:    request.Id,
+				Reply: reply_queue.Name,
+			},
+		},
+	}
+
+	request.Publisher(message)
+	reply_message, err := request.Channel.Consume(reply_queue.Name, "", true, true, false, false, nil)
+	if err != nil {
+		log.Printf("[PUBLISHER] - Unable to consume reply queue messages, error %+v\n", err)
+		return nil, err
+	}
+
+	select {
+	case reply := <-reply_message:
+		{
+			message := events.SearchedMangaMessage{}
+
+			err := json.Unmarshal(reply.Body, &message)
+			if err != nil {
+				log.Printf("[PUBLISHER] - Unable to parse reply body, error %+v\n", err)
+				return nil, err
+			}
+
+			response := SearchByNameResponse{
+				Mangas: message.Data,
+			}
+
+			return &response, nil
+		}
+
+	case <-time.After(120 * time.Second):
+		{
+			return nil, errors.New("Unable to retrieve data, request timeout")
+		}
+	}
 }
