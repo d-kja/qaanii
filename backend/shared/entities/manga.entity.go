@@ -21,21 +21,27 @@ type Manga struct {
 }
 
 func GetStatus(status *string) mangav1.Status {
-	switch *status {
-	case "completed":
-		{
-			return mangav1.Status_STATUS_COMPLETED
-		}
-	case "ongoing":
-		{
-			return mangav1.Status_STATUS_ONGOING
-		}
+	if status != nil {
+		st := *status
 
-	default:
-		{
-			return mangav1.Status_STATUS_UNSPECIFIED
+		switch st {
+		case "completed":
+			{
+				return mangav1.Status_STATUS_COMPLETED
+			}
+		case "ongoing":
+			{
+				return mangav1.Status_STATUS_ONGOING
+			}
+
+		default:
+			{
+				return mangav1.Status_STATUS_UNSPECIFIED
+			}
 		}
 	}
+
+	return mangav1.Status_STATUS_UNSPECIFIED
 }
 
 func (self Manga) ToProtobuf() mangav1.Manga {

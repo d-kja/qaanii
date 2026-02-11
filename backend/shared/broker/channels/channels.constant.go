@@ -15,11 +15,15 @@ const (
 func CreateQueue(name string, channel *amqp.Channel) (*amqp.Queue, error) {
 	queue, err := channel.QueueDeclare(
 		name,
-		true,  // Durable
-		false, // Delete when used
+		false, // Durable
+		true,  // Delete when used
 		false, // Exclusive
 		false, // No-wait
-		nil,
+		amqp.Table{
+			"x-message-ttl": 120000,      // messages expire after 60s
+			"x-max-length":  1000,        // max 1000 messages, oldest dropped
+			"x-overflow":    "drop-head", // drop oldest when full
+		},
 	)
 	if err != nil {
 		return nil, err

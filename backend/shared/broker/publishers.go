@@ -2,6 +2,7 @@ package broker
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"qaanii/shared/broker/channels"
 	"qaanii/shared/broker/events"
@@ -35,4 +36,36 @@ func CreatePublisher(event events.Events, request PublisherRequest) {
 
 	log.Printf("[%v] - publisher created, queue\n", event)
 	*request.Context = context.WithValue(*request.Context, event, &handler)
+}
+
+type PublishRequest struct {
+	Channel    *amqp.Channel
+	Connection *amqp.Connection
+	Data       any
+}
+
+func Reply(queue string, request PublishRequest) (any, error) {
+	body, err := json.Marshal(request.Data)
+	if err != nil {
+		log.Printf("[BROKER/PUBLISHER] - unable to marshal message, error: %+v\n", err)
+		return nil, err
+	}
+
+	err = request.Channel.Publish(
+		"",
+		queue,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        body,
+		},
+	)
+	if err != nil {
+		log.Printf("[BROKER/PUBLISHER] - unable to publish message, error: %+v\n", err)
+		return nil, err
+	}
+
+	log.Printf("[BROKER/PUBLISHER] - %v message sent\n", queue)
+	return request.Data, nil
 }

@@ -18,6 +18,12 @@ func Log(next http.Handler) http.Handler {
 	})
 }
 
+func Recover() {
+	if recovered_err := recover(); recovered_err != nil {
+		log.Printf("[MIDDLEWARE] - Recovered from error: %v", recovered_err)
+	}
+}
+
 func Middlewares(next http.Handler, ctx *context.Context) http.Handler {
 	return Log(next)
 }

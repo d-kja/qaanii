@@ -134,6 +134,8 @@ func (handler SearchHandler) Search(r_ctx context.Context, request *base_buf.Sea
 			log.Printf("[SEARCH] - Unable to send service error status, error %+v\n", err)
 			return err
 		}
+
+		return err
 	}
 
 	mangas := []*base_buf.Manga{}

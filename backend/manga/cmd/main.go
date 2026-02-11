@@ -15,6 +15,7 @@ import (
 	"qaanii/manga/internals/infra/grpc"
 	"qaanii/shared/broker"
 	"qaanii/shared/utils"
+	internal_utils "qaanii/manga/internals/utils"
 	"syscall"
 	"time"
 
@@ -23,12 +24,16 @@ import (
 )
 
 //go:embed schemas.sql
-var ddl string
+var schema string
 var ctx = context.Background()
+
+const buffer_size int = 1024 * 1024 * 15 // 15 MiB
 
 func main() {
 	signal_ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	
+	defer internal_utils.Recover()
 
 	err := dotenv.Load()
 	if err != nil {
@@ -48,7 +53,7 @@ func main() {
 		log.Fatalf("Unable to connect to database URL, error: %+v", err)
 	}
 
-	if _, err := db.ExecContext(ctx, ddl); err != nil {
+	if _, err := db.ExecContext(ctx, schema); err != nil {
 		log.Fatalf("Unable to execute database schema query, error: %+v", err)
 	}
 
@@ -56,8 +61,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to parse redis URL, error: %+v", err)
 	}
-
-	buffer_size := 1024 * 1024 * 15 // 15 MiB
 
 	opts.ReadBufferSize = buffer_size
 	opts.WriteBufferSize = buffer_size

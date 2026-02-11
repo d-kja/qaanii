@@ -55,13 +55,21 @@ func (self *SearchByNameService) Exec(request SearchByNameRequest) (*SearchByNam
 		return nil, err
 	}
 
+	log.Println("[PUBLISHER] - Waiting for reply...")
 	select {
 	case reply := <-reply_message:
 		{
+			log.Println("[PUBLISHER] - Message received")
 			message := events.SearchedMangaMessage{}
 
 			err := json.Unmarshal(reply.Body, &message)
 			if err != nil {
+				// Cancel queued item, GRPC stream is going to close
+				err := reply.Ack(false)
+				if err != nil {
+					log.Printf("[PUBLISHER] - Unable to acknowledge invalid reply, error %+v\n", err)
+				}
+
 				log.Printf("[PUBLISHER] - Unable to parse reply body, error %+v\n", err)
 				return nil, err
 			}

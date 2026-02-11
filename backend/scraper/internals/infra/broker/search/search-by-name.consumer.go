@@ -7,6 +7,8 @@ import (
 	"log"
 	coreentities "qaanii/scraper/internals/domain/core/core_entities"
 	usecase "qaanii/scraper/internals/domain/search/use_case"
+	internal_utils "qaanii/scraper/internals/utils"
+	"qaanii/shared/broker"
 	"qaanii/shared/broker/events"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -15,10 +17,16 @@ import (
 func SearchByNameSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context) error {
 	ctx := *ctx_prt
 
-	searched_publisher, ok := ctx.Value(events.SEARCHED_MANGA_EVENT).(*events.Publisher)
+	connection, ok := ctx.Value(internal_utils.QUEUE_CONNECTION_KEY).(*amqp.Connection)
 	if !ok {
-		log.Println("[SUBSCRIBER/SEARCH] - Unable to retrieve searched manga publisher.")
-		return errors.New("Unable to retrieve search results publisher")
+		log.Println("[SUBSCRIBER/SEARCH] - Unable to retrieve base connection.")
+		return errors.New("Unable to retrieve base connection")
+	}
+
+	channel, ok := ctx.Value(internal_utils.QUEUE_CHANNEL_KEY).(*amqp.Channel)
+	if !ok {
+		log.Println("[SUBSCRIBER/SEARCH] - Unable to retrieve base queue.")
+		return errors.New("Unable to retrieve base queue")
 	}
 
 	message := events.SearchMangaMessage{}
@@ -47,13 +55,17 @@ func SearchByNameSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context)
 	}
 
 	pub_message := events.SearchedMangaMessage{
-		BaseEvent: events.BaseEvent{},
+		BaseEvent: events.BaseEvent{
+			Metadata: message.Metadata,
+		},
 		Data: response.Mangas,
 	}
 
-	pub_message.GenerateEventId(string(events.SEARCHED_MANGA_EVENT), "n/a")
-
-	_, err = (*searched_publisher)(pub_message)
+	_, err = broker.Reply(message.Metadata.Reply, broker.PublishRequest{
+		Channel:    channel,
+		Connection: connection,
+		Data:       pub_message,
+	})
 	if err != nil {
 		log.Printf("[SUBSCRIBER/SEARCH] - Unable to publish search results, error: %+v\n", err)
 		return errors.New("Unable to publish results")
