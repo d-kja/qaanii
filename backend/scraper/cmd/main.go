@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os/signal"
+	coreutils "qaanii/scraper/internals/domain/core/core_utils"
 	internal_broker "qaanii/scraper/internals/infra/broker"
 	"qaanii/scraper/internals/infra/http"
 	internal_utils "qaanii/scraper/internals/utils"
@@ -16,6 +17,7 @@ import (
 	dotenv "github.com/joho/godotenv"
 )
 
+// FIX: Replace with typed struct
 var ctx = context.Background()
 
 func main() {
@@ -30,18 +32,19 @@ func main() {
 	envs := utils.Envs()
 	broker_url := envs["broker_url"]
 
-	conn, channel := broker.Broker(broker_url)
-	defer channel.Close()
+	pool := coreutils.NewBrowserPool()
+	defer pool.Cleanup()
+
+	conn := broker.Broker(broker_url)
 	defer conn.Close()
 
 	ctx = context.WithValue(ctx, internal_utils.QUEUE_CONNECTION_KEY, conn)
-	ctx = context.WithValue(ctx, internal_utils.QUEUE_CHANNEL_KEY, channel)
+	ctx = context.WithValue(ctx, internal_utils.SCRAPER_POOL_KEY, &pool)
 
 	app := fiber.New()
 	http.Router(app) // INFO: Setup HTTP debug endpoints
 
 	internal_broker.SetupSubscribers(broker.SubscriberRequest{
-		Channel:    channel,
 		Connection: conn,
 		Context:    &ctx,
 	})

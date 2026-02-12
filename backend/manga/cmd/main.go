@@ -65,8 +65,7 @@ func main() {
 	opts.ReadBufferSize = buffer_size
 	opts.WriteBufferSize = buffer_size
 
-	conn, channel := broker.Broker(broker_url)
-	defer channel.Close()
+	conn := broker.Broker(broker_url)
 	defer conn.Close()
 
 	redis_ch := redis.NewClient(opts)
@@ -75,11 +74,9 @@ func main() {
 	// Cry all u want, I don't want to use a struct or dep injection framework, f u bish
 	ctx = context.WithValue(ctx, constants.DATABASE_URL, db)
 	ctx = context.WithValue(ctx, constants.REDIS_URL, redis_ch)
-	ctx = context.WithValue(ctx, internal_broker.BROKER_CHANNEL, channel)
 	ctx = context.WithValue(ctx, internal_broker.BROKER_CONNECTION, conn)
 
 	internal_broker.SetupPublishers(broker.PublisherRequest{
-		Channel:    channel,
 		Connection: conn,
 		Context:    &ctx,
 	})

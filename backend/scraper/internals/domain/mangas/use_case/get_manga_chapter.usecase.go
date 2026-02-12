@@ -25,7 +25,6 @@ type GetMangaChapterResponse struct {
 }
 
 func (self *GetMangaChapterService) Exec(request GetMangaChapterRequest) (*GetMangaChapterResponse, error) {
-	defer self.Scraper.Browser.MustClose()
 	envs := utils.Envs()
 
 	url := fmt.Sprintf("%v/%v/%v", envs["base_url"], request.Slug, request.Chapter)

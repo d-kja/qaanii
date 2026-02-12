@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	coreentities "qaanii/scraper/internals/domain/core/core_entities"
+	coreutils "qaanii/scraper/internals/domain/core/core_utils"
 	usecase "qaanii/scraper/internals/domain/search/use_case"
 	internal_utils "qaanii/scraper/internals/utils"
 	"qaanii/shared/broker"
@@ -17,20 +17,27 @@ import (
 func SearchByNameSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context) error {
 	ctx := *ctx_prt
 
+	pool, ok := ctx.Value(internal_utils.SCRAPER_POOL_KEY).(*coreutils.BrowserPool)
+	if !ok {
+		log.Println("[SUBSCRIBER/SEARCH] - Unable to retrieve scraper pool.")
+		return errors.New("Unable to retrieve scraper pool")
+	}
+
 	connection, ok := ctx.Value(internal_utils.QUEUE_CONNECTION_KEY).(*amqp.Connection)
 	if !ok {
 		log.Println("[SUBSCRIBER/SEARCH] - Unable to retrieve base connection.")
 		return errors.New("Unable to retrieve base connection")
 	}
 
-	channel, ok := ctx.Value(internal_utils.QUEUE_CHANNEL_KEY).(*amqp.Channel)
-	if !ok {
-		log.Println("[SUBSCRIBER/SEARCH] - Unable to retrieve base queue.")
-		return errors.New("Unable to retrieve base queue")
+	channel, err := connection.Channel()
+	if err != nil {
+		log.Printf("[SUBSCRIBER/SEARCH] - Unable to retrieve base queue, error: %v", err)
+		return errors.Join(errors.New("Unable to create queue"), err)
 	}
+	defer channel.Close()
 
 	message := events.SearchMangaMessage{}
-	err := json.Unmarshal(raw_message.Body, &message)
+	err = json.Unmarshal(raw_message.Body, &message)
 	if err != nil {
 		log.Printf("[SUBSCRIBER/SEARCH] - unable to parse message body, error: %+v\n", err)
 		return err
@@ -42,8 +49,15 @@ func SearchByNameSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context)
 		return errors.New("Missing query parameter")
 	}
 
+	scraper, err := pool.Get()
+	if err != nil || scraper == nil {
+		log.Println("[SUBSCRIBER/SEARCH] - Unable to acquire scraper instance")
+		return errors.New("Unable to acquire scraper instance")
+	}
+	defer pool.Release(scraper)
+
 	service := usecase.SearchByNameService{
-		Scraper: coreentities.NewScraper(),
+		Scraper: *scraper,
 	}
 
 	response, err := service.Exec(usecase.SearchByNameRequest{

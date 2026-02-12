@@ -11,20 +11,25 @@ import (
 )
 
 type SubscriberRequest struct {
-	Channel    *amqp.Channel
 	Connection *amqp.Connection
 	Context    *context.Context
 }
 
 func CreateConsumer(queue events.Events, request SubscriberRequest, callback func(amqp.Delivery, *context.Context) error) {
-	queue_ch, err := channels.CreateQueue(string(queue), request.Channel)
+	channel, err := request.Connection.Channel()
+	if err != nil {
+		log.Panicf("[SHARED/BROKER] - Channel connection failed, error: %+v", err)
+		return
+	}
+
+	queue_ch, err := channels.CreateQueue(string(queue), channel)
 
 	if err != nil {
 		log.Printf("[BROKER/SUBSCRIBER] - Manga queue creation failed, error: %+v\n", err)
 		return
 	}
 
-	messages_ch, err := channels.CreateSubscriberChannel(queue_ch, request.Channel)
+	messages_ch, err := channels.CreateSubscriberChannel(queue_ch, channel)
 	if err != nil {
 		log.Printf("[BROKER/SUBSCRIBER] - Unable to setup consumer for %v, error: %+v\n", queue, err)
 		return

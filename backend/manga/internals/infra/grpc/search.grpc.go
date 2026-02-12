@@ -105,10 +105,16 @@ func (handler SearchHandler) Search(r_ctx context.Context, request *base_buf.Sea
 		log.Printf("[SEARCH] - Unable to parse search cache, error %+v\n", err)
 	}
 
-	channel, ok := ctx.Value(broker.BROKER_CHANNEL).(*amq.Channel)
+	amq_connection, ok := ctx.Value(broker.BROKER_CONNECTION).(*amq.Connection)
 	if !ok {
+		log.Printf("[SEARCH] - AMQ Connection not found for %v\n", events.SEARCH_MANGA_EVENT)
+		return errors.New("Invalid amq connection")
+	}
+
+	channel, err := amq_connection.Channel()
+	if err != nil {
 		log.Printf("[SEARCH] - AMQ Channel not found for %v\n", events.SEARCH_MANGA_EVENT)
-		return errors.New("Invalid queue publisher")
+		return errors.Join(errors.New("Invalid queue publisher"), err)
 	}
 
 	queue_publisher_raw, ok := ctx.Value(events.SEARCH_MANGA_EVENT).(*events.Publisher)
@@ -128,11 +134,9 @@ func (handler SearchHandler) Search(r_ctx context.Context, request *base_buf.Sea
 
 	service_response, err := service.Exec(service_request)
 	if err != nil {
-		err := stream.Send(&err_response)
-
-		if err != nil {
+		stream_err := stream.Send(&err_response)
+		if stream_err != nil {
 			log.Printf("[SEARCH] - Unable to send service error status, error %+v\n", err)
-			return err
 		}
 
 		return err

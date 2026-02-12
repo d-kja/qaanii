@@ -25,7 +25,6 @@ type SearchByNameResponse struct {
 }
 
 func (self *SearchByNameService) Exec(request SearchByNameRequest) (*SearchByNameResponse, error) {
-	defer self.Scraper.Browser.MustClose()
 	envs := utils.Envs()
 
 	search := url.QueryEscape(request.Search)
@@ -65,25 +64,25 @@ func (self *SearchByNameService) Exec(request SearchByNameRequest) (*SearchByNam
 		}
 
 		content, content_err := manga_element.ElementX(constants.MANGA_CONTENT)
-		if content_err != nil {
+		if content_err != nil || content == nil {
 			log.Printf("Search | Manga element [%v] has an invalid content, error: %+v\n", idx, content_err)
 			continue
 		}
 
 		manga_header, header_err := content.ElementX(constants.MANGA_TITLE)
-		if header_err != nil {
+		if header_err != nil || manga_header == nil  {
 			log.Printf("Search | Manga element [%v] has an invalid header, error: %+v\n", idx, header_err)
 			continue
 		}
 
 		manga_title, title_err := manga_header.Attribute("title")
-		if title_err != nil {
+		if title_err != nil || manga_title == nil {
 			log.Printf("Search | Manga element [%v] has an invalid title, error: %+v\n", idx, title_err)
 			continue
 		}
 
 		manga_url, url_err := manga_header.Attribute("href")
-		if url_err != nil {
+		if url_err != nil || manga_url == nil {
 			log.Printf("Search | Manga element [%v] has an invalid url, error: %+v\n", idx, url_err)
 			continue
 		}
@@ -95,7 +94,7 @@ func (self *SearchByNameService) Exec(request SearchByNameRequest) (*SearchByNam
 		}
 
 		manga_description, description_err := content.ElementX(constants.MANGA_DESCRIPTION)
-		if description_err != nil {
+		if description_err != nil || manga_description == nil {
 			log.Printf("Search | Manga element [%v] has an invalid description, error: %+v\n", idx, description_err)
 		} else {
 			description, err := manga_description.Text()
