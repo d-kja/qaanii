@@ -48,7 +48,12 @@ func (self *SearchByNameService) Exec(request SearchByNameRequest) (*SearchByNam
 		},
 	}
 
-	request.Publisher(message)
+	_, err = request.Publisher(message)
+	if err != nil {
+		log.Printf("[SEARCH] - Unable to publish message, error %+v\n", err)
+		return nil, err
+	}
+
 	reply_message, err := request.Channel.Consume(reply_queue.Name, "", true, true, false, false, nil)
 	if err != nil {
 		log.Printf("[PUBLISHER] - Unable to consume reply queue messages, error %+v\n", err)
@@ -75,7 +80,7 @@ func (self *SearchByNameService) Exec(request SearchByNameRequest) (*SearchByNam
 			return &response, nil
 		}
 
-	case <-time.After(120 * time.Second):
+	case <-time.After(time.Duration(channels.QUEUE_TTL) * time.Second):
 		{
 			return nil, errors.New("Unable to retrieve data, request timeout")
 		}
