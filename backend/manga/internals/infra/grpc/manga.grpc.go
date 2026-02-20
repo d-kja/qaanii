@@ -154,5 +154,7 @@ func SetupMangaRoute(mux *http.ServeMux, ctx *context.Context) {
 	}
 
 	path, handler := buf_handler.NewMangaServiceHandler(service)
+	log.Printf("[SETUP] - Manga path: %v", path)
+
 	mux.Handle(path, utils.Middlewares(handler, ctx))
 }

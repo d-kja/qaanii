@@ -183,5 +183,7 @@ func SetupSearchRoute(mux *http.ServeMux, ctx *context.Context) {
 	}
 
 	path, handler := buf_handler.NewSearchServiceHandler(service)
+	log.Printf("[SETUP] - Search path: %v", path)
+
 	mux.Handle(path, utils.Middlewares(handler, ctx))
 }

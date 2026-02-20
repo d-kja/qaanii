@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	coreentities "qaanii/scraper/internals/domain/core/core_entities"
+	coreutils "qaanii/scraper/internals/domain/core/core_utils"
 	usecase "qaanii/scraper/internals/domain/mangas/use_case"
+	internal_utils "qaanii/scraper/internals/utils"
+	"qaanii/shared/broker"
 	"qaanii/shared/broker/events"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -15,14 +17,27 @@ import (
 func ScrapeChapterSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context) error {
 	ctx := *ctx_prt
 
-	scraped_chapter_publisher, ok := ctx.Value(events.SCRAPED_CHAPTER_EVENT).(*events.Publisher)
+	pool, ok := ctx.Value(internal_utils.SCRAPER_POOL_KEY).(*coreutils.BrowserPool)
 	if !ok {
-		log.Println("[SUBSCRIBER/CHAPTER] - Unable to retrieve scraped chapter publisher.")
-		return errors.New("Unable to retrieve scrape chapter publisher")
+		log.Println("[SUBSCRIBER/CHAPTER] - Unable to retrieve scraper pool.")
+		return errors.New("Unable to retrieve scraper pool")
 	}
 
+	connection, ok := ctx.Value(internal_utils.QUEUE_CONNECTION_KEY).(*amqp.Connection)
+	if !ok {
+		log.Println("[SUBSCRIBER/CHAPTER] - Unable to retrieve base connection.")
+		return errors.New("Unable to retrieve base connection")
+	}
+
+	channel, err := connection.Channel()
+	if err != nil {
+		log.Printf("[SUBSCRIBER/CHAPTER]- Unable to retrieve base queue, error: %v", err)
+		return errors.Join(errors.New("Unable to create queue"), err)
+	}
+	defer channel.Close()
+
 	message := events.ScrapeChapterMessage{}
-	err := json.Unmarshal(raw_message.Body, &message)
+	err = json.Unmarshal(raw_message.Body, &message)
 	if err != nil {
 		log.Printf("[SUBSCRIBER/CHAPTER] - unable to parse message body, error: %+v\n", err)
 		return err
@@ -40,8 +55,15 @@ func ScrapeChapterSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context
 		return errors.New("Missing chapter parameter")
 	}
 
+	scraper, err := pool.Get()
+	if err != nil || scraper == nil {
+		log.Println("[SUBSCRIBER/CHAPTER] - Unable to acquire scraper instance")
+		return errors.New("Unable to acquire scraper instance")
+	}
+	defer pool.Release(scraper)
+
 	service := usecase.GetMangaChapterService{
-		Scraper: coreentities.NewScraper(),
+		Scraper: *scraper,
 	}
 
 	response, err := service.Exec(usecase.GetMangaChapterRequest{
@@ -54,15 +76,19 @@ func ScrapeChapterSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context
 	}
 
 	pub_message := events.ScrapedChapterMessage{
-		BaseEvent: events.BaseEvent{},
-		Data:      response.Chapter,
+		BaseEvent: events.BaseEvent{
+			Metadata: message.Metadata,
+		},
+		Data: response.Chapter,
 	}
 
-	pub_message.GenerateEventId(string(events.SCRAPED_CHAPTER_EVENT), "n/a")
-
-	_, err = (*scraped_chapter_publisher)(pub_message)
+	_, err = broker.Reply(message.Metadata.Reply, broker.PublishRequest{
+		Channel:    channel,
+		Connection: connection,
+		Data:       pub_message,
+	})
 	if err != nil {
-		log.Printf("[SUBSCRIBER/CHAPTER] - Unable to publish scraped results, error: %+v\n", err)
+		log.Printf("[SUBSCRIBER/CHAPTER] - Unable to publish chapter results, error: %+v\n", err)
 		return errors.New("Unable to publish results")
 	}
 

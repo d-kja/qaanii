@@ -156,5 +156,7 @@ func SetupChapterRoute(mux *http.ServeMux, ctx *context.Context) {
 	}
 
 	path, handler := buf_handler.NewChapterServiceHandler(service)
+	log.Printf("[SETUP] - Chapter path: %v", path)
+
 	mux.Handle(path, utils.Middlewares(handler, ctx))
 }
