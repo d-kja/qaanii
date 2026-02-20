@@ -4,9 +4,12 @@ import (
 	"context"
 	"log"
 	"math"
+	"path/filepath"
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/go-rod/stealth"
 )
 
@@ -16,7 +19,17 @@ type Scraper struct {
 }
 
 func NewScraper() Scraper {
-	scraper := rod.New().MustConnect().NoDefaultDevice()
+	extension_path, err := filepath.Abs("fixtures/chrome-extensions/ublock")
+	if err != nil {
+		log.Panicf("[SCRAPER] - Unable to load extensions, error: %+v\n", err)
+	}
+
+	instance := launcher.New().
+		Set("load-extension", extension_path).
+		Headless(false).
+		MustLaunch()
+
+	scraper := rod.New().ControlURL(instance).MustConnect().NoDefaultDevice()
 
 	return Scraper{
 		Browser: scraper,
@@ -24,40 +37,81 @@ func NewScraper() Scraper {
 }
 
 func (self *Scraper) NewPage(url string) *rod.Page {
-	log.Printf("Creating new page, base url [%v]\n", url)
+	log.Printf("[SCRAPPER] - Creating new page, base url [%v]\n", url)
 
 	page := stealth.MustPage(self.Browser).MustWaitStable()
 	self.Page = page.MustNavigate(url).MustWaitStable()
 
 	self.HandleGuard(page)
+	self.HandleModals(page)
+
 	return self.Page
 }
 
 func (self *Scraper) HandleGuard(page *rod.Page) {
-	log.Println("Searching for Guard Elements")
+	log.Println("[SCRAPPER] - Searching for Guard Elements")
 
 	was_found := self.CheckWithRetry(page, GUARD_QUERY, RetryConfig{RetryType: RETRY_XPATH, MaxRetries: 2})
 	if !was_found {
-		log.Println("Not found, skipping logic")
+		log.Println("[SCRAPPER] - Not found, skipping logic")
 		return
 	}
 
-	log.Println("Element found, validating query")
+	log.Println("[SCRAPPER] - Element found, validating query")
 	element, err := page.ElementX(GUARD_QUERY)
 	if err != nil || element == nil {
-		log.Println("Guard not found, skipping logic")
+		log.Println("[SCRAPPER] - Guard not found, skipping logic")
 		return
 	}
 
-	log.Println("Query validated, testint content")
+	log.Println("[SCRAPPER] - Query validated, testing content")
 	content, err := element.Text()
 	if err != nil || len(content) == 0 {
-		log.Println("Guard found, but content empty skipping logic")
+		log.Println("[SCRAPPER] - Guard found, but content empty skipping logic")
 		return
 	}
 
-	log.Println("Content tested, waiting 5 seconds for the guard")
+	log.Println("[SCRAPPER] - Content tested, waiting 5 seconds for the guard")
 	time.Sleep(time.Second * 5)
+}
+
+func (self *Scraper) HandleModals(page *rod.Page) {
+	log.Println("[SCRAPPER] - Searching for WARNING modal")
+
+	was_found := self.CheckWithRetry(page, WARNING_QUERY, RetryConfig{RetryType: RETRY_XPATH, MaxRetries: 2})
+	if !was_found {
+		log.Println("[SCRAPPER] - Not found, skipping logic")
+		return
+	}
+
+	log.Println("[SCRAPPER] - Element found, validating query")
+	element, err := page.ElementX(WARNING_QUERY)
+	if err != nil || element == nil {
+		log.Println("[SCRAPPER] - Warning modal not found, skipping logic")
+		return
+	}
+
+	log.Println("[SCRAPPER] - Query validated, accepting warning")
+	content, err := element.Text()
+	if err != nil || len(content) == 0 {
+		log.Println("[SCRAPPER] - Warning modal found, but content empty skipping logic")
+		return
+	}
+
+	btn_element, err := page.ElementX(WARNING_CONFIRM_BTN_QUERY)
+	if err != nil {
+		log.Println("[SCRAPPER] - Warning modal confirm button not found, skipping logic")
+		return
+	}
+
+	err = btn_element.Click(proto.InputMouseButtonLeft, 1)
+	if err != nil {
+		log.Println("[SCRAPPER] - An error occurred while clicking the warning modal confirm button, skipping logic")
+		return
+	}
+
+	log.Println("[SCRAPPER] - Modal closed successfully, waiting 3 seconds")
+	time.Sleep(time.Second * 3)
 }
 
 type PreloadWithScrollConfig struct {
@@ -88,7 +142,7 @@ func (Scraper) PreloadWithScroll(page *rod.Page, config PreloadWithScrollConfig)
 
 				page_y := page.MustEval(`() => window.scrollY`).Int()
 				if page_y == last_y {
-					log.Println("Manga Chapter | Scroll behavior - reached scroll limit")
+					log.Println("[SCRAPPER] - Manga Chapter | Scroll behavior - reached scroll limit")
 					break
 				}
 
@@ -111,12 +165,12 @@ func (Scraper) CheckWithRetry(page *rod.Page, query string, config RetryConfig) 
 
 	for {
 		if count >= config.MaxRetries {
-			log.Printf("Queried item not found.\n")
+			log.Printf("[SCRAPPER] - Queried item not found.\n")
 			break
 		}
 
 		if was_found {
-			log.Printf("Queried item found!\n")
+			log.Printf("[SCRAPPER] - Queried item found!\n")
 			break
 		}
 
@@ -129,7 +183,7 @@ func (Scraper) CheckWithRetry(page *rod.Page, query string, config RetryConfig) 
 				str_len := len(query)
 				idx := int(math.Min(float64(str_len), 40))
 
-				log.Printf("Cleaning up, base query [%v...] [%v]\n", query[:idx], count)
+				log.Printf("[SCRAPPER] - Cleaning up, base query [%v...] [%v]\n", query[:idx], count)
 
 				close(found_ch)
 				cancel()
@@ -196,13 +250,13 @@ func (Scraper) CheckWithRetry(page *rod.Page, query string, config RetryConfig) 
 			select {
 			case was_found = <-found_ch:
 				{
-					log.Printf("Retry channel finished, was element found? [%v]\n", was_found)
+					log.Printf("[SCRAPPER] - Retry channel finished, was element found? [%v]\n", was_found)
 					break
 				}
 
 			case <-ctx_timeout.Done():
 				{
-					log.Printf("Context timed out, count [%v]\n", count)
+					log.Printf("[SCRAPPER] - Context timed out, count [%v]\n", count)
 					break
 				}
 			}
@@ -223,3 +277,5 @@ var (
 
 const ROD_KEY string = "@locals/rod"
 const GUARD_QUERY string = "//title[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'ddos-guard')]"
+const WARNING_QUERY string = "//h5[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'adult content warning')]"
+const WARNING_CONFIRM_BTN_QUERY string = "//h5[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'adult content warning')]/../../div[contains(@class, 'modal-footer')]/button[contains(@class, 'btn-warning')]"

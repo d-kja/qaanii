@@ -75,12 +75,22 @@ func ScrapeChapterSubscriber(raw_message amqp.Delivery, ctx_prt *context.Context
 		return errors.New("Unable to retrieve chapter")
 	}
 
+	pages := *response.Chapter.Pages
+
 	pub_message := events.ScrapedChapterMessage{
 		BaseEvent: events.BaseEvent{
 			Metadata: message.Metadata,
 		},
-		Data: response.Chapter,
+		Data: events.MessageChapter{
+			Title: response.Chapter.Title,
+			Link:  response.Chapter.Link,
+			Time:  response.Chapter.Time,
+			Pages: pages,
+		},
 	}
+
+	a, _ := json.MarshalIndent(pub_message, "", " ")
+	log.Printf("JSON: %+v", string(a))
 
 	_, err = broker.Reply(message.Metadata.Reply, broker.PublishRequest{
 		Channel:    channel,

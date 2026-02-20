@@ -34,6 +34,7 @@ services:
       - 15672:15672 # UI
     volumes:
       - broker-data:/var/lib/rabbitmq/
+      - './docker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf'
       # - broker-logs:/var/log/rabbitmq
     networks:
       - manga

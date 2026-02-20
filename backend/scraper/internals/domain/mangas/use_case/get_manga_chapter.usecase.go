@@ -33,7 +33,7 @@ func (self *GetMangaChapterService) Exec(request GetMangaChapterRequest) (*GetMa
 
 	was_found := self.Scraper.CheckWithRetry(page, constants.MANGA_CHAPTER_IMAGES, coreentities.RetryConfig{RetryType: coreentities.RETRY_XPATH_MANY, MaxRetries: 5})
 	if !was_found {
-		log.Println("Manga Chapter | Container not found.")
+		log.Println("[CHAPTER] - Container not found.")
 		return nil, errors.New("Chapter container not found.")
 	}
 
@@ -46,26 +46,27 @@ func (self *GetMangaChapterService) Exec(request GetMangaChapterRequest) (*GetMa
 	pages_container := page.MustElementsX(constants.MANGA_CHAPTER_IMAGES)
 	pages := []entities.Page{}
 
+	log.Printf("[CHAPTER] - Pages found: [%v]\n", len(pages_container))
 	for idx, el_page := range pages_container {
 		if el_page == nil {
-			log.Printf("Chapter | Page [%v] is nil\n", idx)
+			log.Printf("[CHAPTER] - Page [%v] is nil\n", idx)
 			continue
 		}
 
 		image_url, err := el_page.Attribute("src")
 		if err != nil {
-			log.Printf("Chapter | Page [%v] has an invalid url\n", idx+1)
+			log.Printf("[CHAPTER] - Page [%v] has an invalid url\n", idx+1)
 			continue
 		}
 
 		if image_url == nil {
-			log.Printf("Chapter | Page [%v] image url invalid pointer: %+v\n", idx+1, image_url)
+			log.Printf("[CHAPTER] - Page [%v] image url invalid pointer: %+v\n", idx+1, image_url)
 			continue
 		}
 
 		image_resource, err := el_page.Resource()
 		if err != nil || len(image_resource) == 0 {
-			log.Printf("Chapter | Page [%v] unable to retrieve image resource, error [%v]: %+v\n", idx+1, len(image_resource), err)
+			log.Printf("[CHAPTER] - Page [%v] unable to retrieve image resource, error [%v]: %+v\n", idx+1, len(image_resource), err)
 			continue
 		}
 

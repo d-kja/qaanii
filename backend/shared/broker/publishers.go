@@ -56,6 +56,8 @@ func Reply(queue string, request PublishRequest) (any, error) {
 		return nil, err
 	}
 
+	log.Printf("V %v", string(body))
+
 	err = request.Channel.Publish(
 		"",
 		queue,

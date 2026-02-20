@@ -12,8 +12,17 @@ type ScrapeChapterMessage struct {
 	BaseEvent
 }
 
+type MessageChapter struct {
+	Title string `json:"title"`
+	Link  string `json:"link"`
+
+	Time string `json:"time"`
+
+	Pages []entities.Page `json:"pages"`
+}
+
 type ScrapedChapterMessage struct {
-	Data entities.Chapter `json:"data"`
+	Data MessageChapter `json:"data"`
 
 	BaseEvent
 }

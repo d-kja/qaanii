@@ -1,4 +1,6 @@
 .env*
 !.env.example
 
+backend/scraper/fixtures/chrome-extensions/ublock/*
+
 **/tmp

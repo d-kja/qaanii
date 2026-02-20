@@ -72,7 +72,12 @@ func (self *GetMangaChapterService) Exec(request GetMangaChapterRequest) (*GetMa
 			}
 
 			response := GetMangaChapterResponse{
-				Chapter: message.Data,
+				Chapter: entities.Chapter{
+					Link:  message.Data.Link,
+					Title: message.Data.Title,
+					Time:  message.Data.Time,
+					Pages: &message.Data.Pages,
+				},
 			}
 
 			return &response, nil
