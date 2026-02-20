@@ -10,10 +10,12 @@ import (
 
 const (
 	MANGA_CHANNEL string = "@manga"
-	QUEUE_TTL     uint    = 120
+	QUEUE_TTL     int    = 120
 )
 
 func CreateQueue(name string, channel *amqp.Channel) (*amqp.Queue, error) {
+	ttl := time.Duration(QUEUE_TTL) * time.Second
+
 	queue, err := channel.QueueDeclare(
 		name,
 		false, // Durable
@@ -21,9 +23,9 @@ func CreateQueue(name string, channel *amqp.Channel) (*amqp.Queue, error) {
 		false, // Exclusive
 		false, // No-wait
 		amqp.Table{
-			"x-message-ttl": QUEUE_TTL * 100, // messages expire after 120s
-			"x-max-length":  1000,            // max 1000 messages, oldest dropped
-			"x-overflow":    "drop-head",     // drop oldest when full
+			"x-message-ttl": ttl.Abs().Milliseconds(), // messages expire after 120s
+			"x-max-length":  1000,                     // max 1000 messages, oldest dropped
+			"x-overflow":    "drop-head",              // drop oldest when full
 		},
 	)
 	if err != nil {

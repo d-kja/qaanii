@@ -13,7 +13,9 @@ import (
 	"qaanii/manga/internals/utils"
 	base_buf "qaanii/mangabuf/gen/manga/v1"
 	buf_handler "qaanii/mangabuf/gen/manga/v1/mangav1connect"
+	"qaanii/shared/broker/channels"
 	"qaanii/shared/broker/events"
+	"time"
 
 	"connectrpc.com/connect"
 	amq "github.com/rabbitmq/amqp091-go"
@@ -25,19 +27,19 @@ type SearchHandler struct {
 	buf_handler.SearchServiceHandler
 }
 
-var initial_status base_buf.SearchResponse = base_buf.SearchResponse{
+var initial_search base_buf.SearchResponse = base_buf.SearchResponse{
 	Status: base_buf.RequestStatus_REQUEST_STATUS_LOADING,
 	Data:   nil,
 }
 
-var err_response base_buf.SearchResponse = base_buf.SearchResponse{
+var err_search base_buf.SearchResponse = base_buf.SearchResponse{
 	Status: base_buf.RequestStatus_REQUEST_STATUS_ERROR,
 	Data:   nil,
 }
 
 const SEARCH_KEY string = "SEARCH"
 
-var IDEMPOTENCY_KEY string = fmt.Sprintf("%v/IDEMPOTENCY_KEY", SEARCH_KEY)
+var SEARCH_IDEMPOTENCY_KEY string = fmt.Sprintf("%v/IDEMPOTENCY_KEY", SEARCH_KEY)
 
 type SearchCache struct {
 	Status base_buf.RequestStatus
@@ -53,15 +55,16 @@ func (handler SearchHandler) Search(r_ctx context.Context, request *base_buf.Sea
 		return errors.New("Invalid redis client")
 	}
 
-	err := stream.Send(&initial_status)
+	err := stream.Send(&initial_search)
 	if err != nil {
 		log.Printf("[SEARCH] - Unable to send initial status, error %+v\n", err)
 		return err
 	}
 
-	// TODO: Abstract into a separate function
-	idempotency, err := redis_ch.Get(r_ctx, fmt.Sprintf("%v/%v/%v", IDEMPOTENCY_KEY, request.Slug, request.Id)).Result()
+	idempotency_key := fmt.Sprintf("%v/%v/%v", SEARCH_IDEMPOTENCY_KEY, request.Slug, request.Id)
+	idempotency, err := redis_ch.Get(r_ctx, idempotency_key).Result()
 	if err == nil {
+		// TODO: Abstract into a separate function
 		cache := SearchCache{}
 
 		cache_err := json.Unmarshal([]byte(idempotency), &cache)
@@ -134,7 +137,7 @@ func (handler SearchHandler) Search(r_ctx context.Context, request *base_buf.Sea
 
 	service_response, err := service.Exec(service_request)
 	if err != nil {
-		stream_err := stream.Send(&err_response)
+		stream_err := stream.Send(&err_search)
 		if stream_err != nil {
 			log.Printf("[SEARCH] - Unable to send service error status, error %+v\n", err)
 		}
@@ -151,6 +154,18 @@ func (handler SearchHandler) Search(r_ctx context.Context, request *base_buf.Sea
 	response := base_buf.SearchResponse{
 		Status: base_buf.RequestStatus_REQUEST_STATUS_COMPLETED,
 		Data:   mangas,
+	}
+
+	cache_idempotency, err := json.Marshal(SearchCache{
+		Status: response.Status,
+		Data:   response.Data,
+	})
+	if err == nil {
+		_, err = redis_ch.Set(r_ctx, idempotency_key, cache_idempotency, time.Duration(channels.QUEUE_TTL)*time.Second).Result()
+
+		if err != nil {
+			log.Printf("[SEARCH] - Unable to write idempotency cache, error: %v", err)
+		}
 	}
 
 	err = stream.Send(&response)
